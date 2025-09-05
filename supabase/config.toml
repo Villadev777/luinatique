@@ -1,0 +1,13 @@
+project_id = "sjrlfwxfojfyzujulyas"
+
+[functions.ai-product-recommendations]
+verify_jwt = false
+
+[functions.send-order-confirmation]
+verify_jwt = false
+
+[functions.process-payment]
+verify_jwt = false
+
+[functions.inventory-alert]
+verify_jwt = false
