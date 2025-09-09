@@ -34,6 +34,7 @@ interface CartContextType {
   decreaseQuantity: (id: string) => void;
   clearCart: () => void;
   getItemQuantity: (id: string) => number;
+  isInCart: (id: string) => boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -41,11 +42,15 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case 'ADD_ITEM': {
-      const existingItem = state.items.find(item => item.id === action.payload.id);
+      // Create a unique key for the item including size and material
+      const itemKey = `${action.payload.id}-${action.payload.selectedSize || ''}-${action.payload.selectedMaterial || ''}`;
+      const existingItem = state.items.find(item => 
+        `${item.id}-${item.selectedSize || ''}-${item.selectedMaterial || ''}` === itemKey
+      );
       
       if (existingItem) {
         const updatedItems = state.items.map(item =>
-          item.id === action.payload.id
+          `${item.id}-${item.selectedSize || ''}-${item.selectedMaterial || ''}` === itemKey
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
@@ -194,6 +199,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return item?.quantity || 0;
   };
 
+  const isInCart = (id: string): boolean => {
+    return state.items.some(item => item.id === id);
+  };
   const value: CartContextType = {
     state,
     addItem,
@@ -203,6 +211,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     decreaseQuantity,
     clearCart,
     getItemQuantity,
+    isInCart,
   };
 
   return (

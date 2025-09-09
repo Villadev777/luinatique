@@ -27,6 +27,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
     }).format(price);
   };
 
+  const getItemPrice = (item: any) => {
+    return item.sale_price || item.price;
+  };
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -116,9 +119,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
                           
                           <div className="text-right">
                             <p className="text-sm font-semibold">
-                              {formatPrice((item.sale_price || item.price) * item.quantity)}
+                              {formatPrice(getItemPrice(item) * item.quantity)}
                             </p>
-                            {item.sale_price && (
+                            {item.sale_price && item.sale_price < item.price && (
                               <p className="text-xs text-muted-foreground line-through">
                                 {formatPrice(item.price * item.quantity)}
                               </p>
@@ -140,7 +143,25 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
                 </div>
               </div>
 
+              <Separator className="my-4" />
               <div className="border-t pt-4 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>{formatPrice(state.totalPrice)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Shipping:</span>
+                    <span>Calculated at checkout</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Tax:</span>
+                    <span>Calculated at checkout</span>
+                  </div>
+                </div>
+                
+                <Separator />
+                
                 <div className="flex justify-between items-center">
                   <span className="text-base font-semibold">Total:</span>
                   <span className="text-lg font-bold">
@@ -154,6 +175,14 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
                   </Button>
                   
                   <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => window.location.href = '/shop'}
+                  >
+                    Continue Shopping
+                  </Button>
+                  
+                  <Button
                     variant="outline"
                     className="w-full"
                     onClick={clearCart}
@@ -164,7 +193,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
                 </div>
                 
                 <p className="text-xs text-muted-foreground text-center">
-                  Shipping and taxes calculated at checkout
+                  Free shipping on orders over $50
                 </p>
               </div>
             </>
