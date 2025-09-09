@@ -133,7 +133,7 @@ const Header = () => {
                         {navItem.sections.map(({ section, subcategories }) => (
                           <div key={section.id}>
                             <a
-                              href={`/shop/${section.slug}`}
+                              href={navItem.mainCategory.slug === 'lunatique' ? `/lunatique/${section.slug}` : `/shop/${section.slug}`}
                               className="block py-1 text-xs text-muted-foreground hover:text-primary transition-colors"
                               onClick={() => setIsMenuOpen(false)}
                             >
