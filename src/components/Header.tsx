@@ -17,7 +17,7 @@ const Header = () => {
     <header className="relative bg-background border-b border-border">
       {/* Announcement Bar */}
       <div className="bg-sage text-sage-foreground text-center py-2 text-sm">
-        We are now offering complimentary shipping on orders all over $50! Explore our products. ✨
+        ¡Ahora ofrecemos envío gratuito en pedidos superiores a 50 soles ! Explora nuestros productos. ✨
       </div>
 
       {/* Main Header */}
