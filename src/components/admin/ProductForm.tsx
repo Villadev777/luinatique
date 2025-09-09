@@ -3,12 +3,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Upload, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -34,6 +36,9 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>;
 
+type Category = Tables<'categories'>;
+type Subcategory = Tables<'subcategories'>;
+
 interface Product {
   id: string;
   name: string;
@@ -45,6 +50,7 @@ interface Product {
   stock_quantity: number;
   featured: boolean;
   category_id: string | null;
+  subcategory_id: string | null;
   sizes: string[] | null;
   materials: string[] | null;
   slug: string;
@@ -62,6 +68,11 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
   const [materials, setMaterials] = useState<string[]>(product?.materials || []);
   const [newSize, setNewSize] = useState('');
   const [newMaterial, setNewMaterial] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(product?.category_id || '');
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>(product?.subcategory_id || '');
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const { toast } = useToast();
 
   const form = useForm<ProductFormData>({
@@ -77,6 +88,57 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
       slug: product?.slug || '',
     },
   });
+
+  // Fetch categories and subcategories
+  useEffect(() => {
+    const fetchCategoriesAndSubcategories = async () => {
+      try {
+        setLoadingCategories(true);
+        
+        // Fetch legacy categories
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('*')
+          .order('name');
+
+        if (categoriesError) {
+          console.error('Error fetching categories:', categoriesError);
+        } else {
+          setCategories(categoriesData || []);
+        }
+
+        // Fetch subcategories with their section and main category info
+        const { data: subcategoriesData, error: subcategoriesError } = await supabase
+          .from('subcategories')
+          .select(`
+            *,
+            category_section:category_sections(
+              name,
+              main_category:main_categories(name)
+            )
+          `)
+          .eq('is_active', true)
+          .order('display_order');
+
+        if (subcategoriesError) {
+          console.error('Error fetching subcategories:', subcategoriesError);
+        } else {
+          setSubcategories(subcategoriesData || []);
+        }
+      } catch (error) {
+        console.error('Error fetching categories and subcategories:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load categories and subcategories",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategoriesAndSubcategories();
+  }, [toast]);
 
   const generateSlug = (name: string) => {
     return name
@@ -180,6 +242,8 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
         images,
         sizes: sizes.length > 0 ? sizes : null,
         materials: materials.length > 0 ? materials : null,
+        category_id: selectedCategoryId || null,
+        subcategory_id: selectedSubcategoryId || null,
       };
 
       if (product) {
@@ -232,6 +296,12 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
         variant: "destructive",
       });
     }
+  };
+
+  const getSubcategoryDisplayName = (subcategory: any) => {
+    const mainCategoryName = subcategory.category_section?.main_category?.name || 'Unknown';
+    const sectionName = subcategory.category_section?.name || 'Unknown';
+    return `${mainCategoryName} → ${sectionName} → ${subcategory.name}`;
   };
 
   return (
@@ -478,25 +548,43 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="category_id">Legacy Category (Optional)</Label>
-                  <select
-                    id="category_id"
-                    className="w-full h-10 px-3 py-2 border border-input rounded-md bg-background"
-                    defaultValue=""
+                  <Select
+                    value={selectedCategoryId}
+                    onValueChange={setSelectedCategoryId}
+                    disabled={loadingCategories}
                   >
-                    <option value="">Select legacy category</option>
-                    {/* Legacy categories would be populated here */}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingCategories ? "Loading..." : "Select legacy category"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No category</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="subcategory_id">Subcategory (Recommended)</Label>
-                  <select
-                    id="subcategory_id"
-                    className="w-full h-10 px-3 py-2 border border-input rounded-md bg-background"
-                    defaultValue=""
+                  <Select
+                    value={selectedSubcategoryId}
+                    onValueChange={setSelectedSubcategoryId}
+                    disabled={loadingCategories}
                   >
-                    <option value="">Select subcategory</option>
-                    {/* Subcategories would be populated here */}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingCategories ? "Loading..." : "Select subcategory"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No subcategory</SelectItem>
+                      {subcategories.map((subcategory) => (
+                        <SelectItem key={subcategory.id} value={subcategory.id}>
+                          {getSubcategoryDisplayName(subcategory)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
