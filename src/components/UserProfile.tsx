@@ -9,12 +9,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, Settings, Heart, ShoppingBag, LogOut } from 'lucide-react';
+import { User, Settings, Heart, ShoppingBag, LogOut, Home } from 'lucide-react';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export const UserProfile: React.FC = () => {
   const { user, signOut, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -68,24 +72,67 @@ export const UserProfile: React.FC = () => {
           </div>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {
+          // Placeholder for Profile page navigation
+          toast({
+            title: "Feature Coming Soon",
+            description: "Your profile page is under construction!",
+          });
+          // navigate('/profile'); // Uncomment and implement when profile page exists
+        }}>
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {
+          // Placeholder for Favorites page navigation
+          toast({
+            title: "Feature Coming Soon",
+            description: "Your favorites list is under construction!",
+          });
+          // navigate('/favorites'); // Uncomment and implement when favorites page exists
+        }}>
           <Heart className="mr-2 h-4 w-4" />
           <span>Favorites</span>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {
+          // Placeholder for Orders page navigation
+          toast({
+            title: "Feature Coming Soon",
+            description: "Your order history is under construction!",
+          });
+          // navigate('/orders'); // Uncomment and implement when orders page exists
+        }}>
           <ShoppingBag className="mr-2 h-4 w-4" />
           <span>Orders</span>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {
+          // Placeholder for Settings page navigation
+          toast({
+            title: "Feature Coming Soon",
+            description: "Your settings page is under construction!",
+          });
+          // navigate('/settings'); // Uncomment and implement when settings page exists
+        }}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>
+        <DropdownMenuItem onClick={async () => {
+          const { error } = await signOut();
+          if (error) {
+            toast({
+              title: "Sign out failed",
+              description: error.message,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Signed out",
+              description: "You have been successfully signed out.",
+            });
+            navigate('/'); // Redirect to home page after sign out
+          }
+        }}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Sign out</span>
         </DropdownMenuItem>
