@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useCategories } from "@/hooks/useCategories";
+import { MegaMenu } from "@/components/Navigation/MegaMenu";
 import { Search, ShoppingBag, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,15 +11,8 @@ import { useCart } from "@/context/CartContext";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { navigationStructure, loading } = useCategories();
   const { state } = useCart();
-
-  const navigation = [
-    { name: "SHOP", href: "/shop" },
-    { name: "COLLECTIONS", href: "/collections" },
-    { name: "OUR STORY", href: "/story" },
-    { name: "JOURNAL", href: "/journal" }
-  ];
-
   return (
     <header className="relative bg-background border-b border-border">
       {/* Announcement Bar */}
@@ -98,12 +93,88 @@ const Header = () => {
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex justify-center py-4 border-t border-border">
-          <div className="flex space-x-8">
-            {navigation.map((item) => (
-              <a
-                key={item.name}
-                href={item.href}
+        <div className="hidden md:flex justify-center py-4 border-t border-border">
+          {loading ? (
+            <div className="flex items-center space-x-8">
+              <div className="h-4 w-16 bg-muted animate-pulse rounded"></div>
+              <div className="h-4 w-20 bg-muted animate-pulse rounded"></div>
+              <div className="h-4 w-12 bg-muted animate-pulse rounded"></div>
+              <div className="h-4 w-24 bg-muted animate-pulse rounded"></div>
+            </div>
+          ) : (
+            <MegaMenu navigationData={navigationStructure} />
+          )}
+        </div>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-background border-t border-border">
+            <div className="px-4 py-4 space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  className="pl-10"
+                />
+              </div>
+              <nav className="space-y-2">
+                {navigationStructure.map((navItem) => (
+                  <div key={navItem.mainCategory.id} className="space-y-2">
+                    <a
+                      href={`/${navItem.mainCategory.slug}`}
+                      className="block py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {navItem.mainCategory.name}
+                    </a>
+                    {navItem.sections.length > 0 && (
+                      <div className="ml-4 space-y-1">
+                        {navItem.sections.map(({ section, subcategories }) => (
+                          <div key={section.id}>
+                            <a
+                              href={`/${navItem.mainCategory.slug}/${section.slug}`}
+                              className="block py-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                              onClick={() => setIsMenuOpen(false)}
+                            >
+                              {section.name}
+                            </a>
+                            {subcategories.length > 0 && (
+                              <div className="ml-4 space-y-1">
+                                {subcategories.map((subcategory) => (
+                                  <a
+                                    key={subcategory.id}
+                                    href={`/${navItem.mainCategory.slug}/${section.slug}/${subcategory.slug}`}
+                                    className="block py-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                                    onClick={() => setIsMenuOpen(false)}
+                                  >
+                                    • {subcategory.name}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </nav>
+              <div className="pt-4 border-t border-border">
+                <div className="md:hidden">
+                  <UserProfile />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+};
+
+export default Header;
+
                 className="text-sm font-medium text-foreground hover:text-primary transition-colors duration-200 tracking-wide"
               >
                 {item.name}

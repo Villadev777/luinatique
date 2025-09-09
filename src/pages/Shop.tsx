@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
+import { useCategories } from "@/hooks/useCategories";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,12 +37,14 @@ interface Category {
 
 const Shop = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("all");
   const [sortBy, setSortBy] = useState("featured");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { addItem, isInCart, getItemQuantity } = useCart();
+  const { getShopCategories } = useCategories();
 
   const fetchProducts = async () => {
     try {
@@ -100,9 +103,15 @@ const Shop = () => {
     loadData();
   }, []);
 
-  const filteredProducts = selectedCategory === "all" 
-    ? products 
-    : products.filter(product => product.category_id === selectedCategory);
+  const shopCategories = getShopCategories();
+
+  const filteredProducts = products.filter(product => {
+    if (selectedCategory === "all") return true;
+    if (selectedSubcategory === "all") {
+      return product.category_id === selectedCategory;
+    }
+    return product.subcategory_id === selectedSubcategory;
+  });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
@@ -169,10 +178,10 @@ const Shop = () => {
         <section className="bg-sage/10 py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="font-playfair text-4xl md:text-5xl font-semibold text-foreground mb-4">
-              Shop Collection
+              Tienda Lunatiquê
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Discover our handcrafted jewelry pieces, each designed to capture the magic of celestial beauty.
+              Descubre nuestras piezas de joyería artesanal, cada una diseñada con técnicas únicas y materiales de calidad.
             </p>
           </div>
         </section>
@@ -187,18 +196,31 @@ const Shop = () => {
                   size="sm"
                   onClick={() => setSelectedCategory("all")}
                 >
-                  All Jewelry
+                  Todos los Productos
                 </Button>
-                {categories.map((category) => (
-                  <Button
-                    key={category.id}
-                    variant={selectedCategory === category.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedCategory(category.id)}
-                  >
-                    {category.name}
-                  </Button>
-                ))}
+                {shopCategories?.sections.map(({ section, subcategories }) => (
+                  <div key={section.id} className="flex flex-wrap gap-1">
+                    <Button
+                      variant={selectedCategory === section.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCategory(section.id);
+                        setSelectedSubcategory("all");
+                      }}
+                    >
+                      {section.name}
+                    </Button>
+                    {selectedCategory === section.id && subcategories.map((subcategory) => (
+                      <Button
+                        key={subcategory.id}
+                        variant={selectedSubcategory === subcategory.id ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setSelectedSubcategory(subcategory.id)}
+                      >
+                        {subcategory.name}
+                      </Button>
+                    ))}
+                  </div>
               </div>
               
               <div className="flex items-center gap-4">
@@ -210,10 +232,10 @@ const Shop = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="featured">Featured</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="featured">Destacados</SelectItem>
+                    <SelectItem value="price-low">Precio: Menor a Mayor</SelectItem>
+                    <SelectItem value="price-high">Precio: Mayor a Menor</SelectItem>
+                    <SelectItem value="newest">Más Recientes</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -227,12 +249,12 @@ const Shop = () => {
             {loading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading products...</p>
+                <p className="text-muted-foreground">Cargando productos...</p>
               </div>
             ) : sortedProducts.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">No products found</p>
-                <p className="text-sm text-muted-foreground">Try adjusting your filters or check back later for new arrivals</p>
+                <p className="text-muted-foreground mb-4">No se encontraron productos</p>
+                <p className="text-sm text-muted-foreground">Intenta ajustar los filtros o revisa más tarde para nuevos productos</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -249,12 +271,12 @@ const Shop = () => {
                       <div className="absolute top-4 left-4 flex flex-col gap-2">
                         {product.featured && (
                           <Badge className="bg-primary text-primary-foreground">
-                            Featured
+                            Destacado
                           </Badge>
                         )}
                         {hasDiscount(product) && (
                           <Badge className="bg-destructive text-destructive-foreground">
-                            Sale
+                            Oferta
                           </Badge>
                         )}
                       </div>
@@ -289,7 +311,7 @@ const Shop = () => {
                       {product.stock_quantity <= 5 && product.stock_quantity > 0 && (
                         <div className="absolute bottom-4 left-4">
                           <Badge variant="outline" className="bg-background/80 backdrop-blur-sm">
-                            Only {product.stock_quantity} left
+                            Solo {product.stock_quantity} disponibles
                           </Badge>
                         </div>
                       )}
@@ -330,7 +352,7 @@ const Shop = () => {
                             className="flex items-center gap-2"
                           >
                             <ShoppingCart className="h-4 w-4" />
-                            {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+                            {product.in_stock ? 'Añadir al Carrito' : 'Agotado'}
                           </Button>
                         </div>
                       </div>
