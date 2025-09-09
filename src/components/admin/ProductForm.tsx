@@ -26,12 +26,15 @@ import { Badge } from '@/components/ui/badge';
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
   description: z.string().optional(),
-  price: z.number().min(0, 'Price must be positive'),
-  sale_price: z.number().optional(),
-  in_stock: z.boolean(),
-  stock_quantity: z.number().min(0, 'Stock quantity must be positive'),
-  featured: z.boolean(),
+  price: z.coerce.number().min(0, 'Price must be positive'),
+  sale_price: z.coerce.number().min(0).optional().nullable(),
+  in_stock: z.coerce.boolean(),
+  stock_quantity: z.coerce.number().int().min(0, 'Stock quantity must be positive'),
+  featured: z.coerce.boolean(),
   slug: z.string().min(1, 'Slug is required'),
+}).refine(d => d.sale_price == null || d.sale_price <= d.price, {
+  path: ['sale_price'],
+  message: 'Sale price must be <= price',
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -142,11 +145,13 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
 
   const generateSlug = (name: string) => {
     return name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
-      .replace(/[^a-z0-9 -]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
       .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
+      .replace(/-+/g, '-');
   };
 
   const watchName = form.watch('name');
