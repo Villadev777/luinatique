@@ -16,6 +16,12 @@ import Lunatique from "./pages/Lunatique";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import Anillos from "./pages/categories/Anillos";
+import Aretes from "./pages/categories/Aretes";
+import Collares from "./pages/categories/Collares";
+import Pulseras from "./pages/categories/Pulseras";
+import Llaveros from "./pages/categories/Llaveros";
+import Prendedores from "./pages/categories/Prendedores";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +46,21 @@ const App = () => (
               <Route path="/lunatique" element={<Lunatique />} />
               <Route path="/contactanos" element={<Contact />} />
               <Route path="/admin" element={<Admin />} />
+              
+              {/* Category Pages */}
+              <Route path="/shop/anillos" element={<Anillos />} />
+              <Route path="/shop/anillos/:subcategory" element={<Anillos />} />
+              <Route path="/shop/aretes" element={<Aretes />} />
+              <Route path="/shop/aretes/:subcategory" element={<Aretes />} />
+              <Route path="/shop/collares" element={<Collares />} />
+              <Route path="/shop/collares/:subcategory" element={<Collares />} />
+              <Route path="/shop/pulseras" element={<Pulseras />} />
+              <Route path="/shop/pulseras/:subcategory" element={<Pulseras />} />
+              <Route path="/shop/llaveros" element={<Llaveros />} />
+              <Route path="/shop/llaveros/:subcategory" element={<Llaveros />} />
+              <Route path="/shop/prendedores" element={<Prendedores />} />
+              <Route path="/shop/prendedores/:subcategory" element={<Prendedores />} />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -26,7 +26,7 @@ const Hero = () => {
       title: "Anillos únicos",
       subtitle: "hechos a mano",
       description: "Diseños atemporales que celebran tu historia única y tus momentos más preciados.",
-      buttonText: "EXPLORAR ANILLOS",
+      buttonText: "EXPLORAR ANILLOS", 
       buttonLink: "/shop/anillos"
     },
     {
