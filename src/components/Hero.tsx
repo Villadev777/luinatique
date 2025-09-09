@@ -14,37 +14,37 @@ const Hero = () => {
     {
       id: 1,
       image: heroImage,
-      title: "Modern jewelry",
-      subtitle: "that lasts",
-      description: "From the sparkliest peaks to the darkest depths, utilizing all materials.",
-      buttonText: "SHOP NEW ARRIVALS",
+      title: "Joyería moderna",
+      subtitle: "que perdura",
+      description: "Desde los picos más brillantes hasta las profundidades más oscuras, utilizando todos los materiales.",
+      buttonText: "VER NUEVOS PRODUCTOS",
       buttonLink: "/shop"
     },
     {
       id: 2,
       image: ringsImage,
-      title: "Signature rings",
-      subtitle: "handcrafted",
-      description: "Timeless designs that celebrate your unique story and most precious moments.",
-      buttonText: "EXPLORE RINGS",
+      title: "Anillos únicos",
+      subtitle: "hechos a mano",
+      description: "Diseños atemporales que celebran tu historia única y tus momentos más preciados.",
+      buttonText: "EXPLORAR ANILLOS",
       buttonLink: "/shop/anillos"
     },
     {
       id: 3,
       image: earringsImage,
-      title: "Elegant earrings",
-      subtitle: "for every occasion",
-      description: "From delicate studs to statement pieces, find the perfect pair for you.",
-      buttonText: "DISCOVER EARRINGS",
+      title: "Aretes elegantes",
+      subtitle: "para cada ocasión",
+      description: "Desde delicados broches hasta piezas llamativas, encuentra el par perfecto para ti.",
+      buttonText: "DESCUBRIR ARETES",
       buttonLink: "/shop/aretes"
     },
     {
       id: 4,
       image: necklacesImage,
-      title: "Delicate necklaces",
-      subtitle: "that inspire",
-      description: "Minimalist pieces that connect you to the infinite beauty of the universe.",
-      buttonText: "VIEW NECKLACES",
+      title: "Collares delicados",
+      subtitle: "que inspiran",
+      description: "Piezas minimalistas que te conectan con la belleza infinita del universo.",
+      buttonText: "VER COLLARES",
       buttonLink: "/shop/collares"
     }
   ];
@@ -158,13 +158,6 @@ const Hero = () => {
           ))}
         </div>
         
-        {/* Auto-play indicator */}
-        <div className="flex flex-col items-center gap-2 mt-4">
-          <span className="text-xs text-white/60 tracking-wider">
-            {isAutoPlaying ? 'AUTO' : 'MANUAL'}
-          </span>
-          <div className="w-px h-6 bg-white/40"></div>
-        </div>
       </div>
 
       {/* Progress Bar */}
