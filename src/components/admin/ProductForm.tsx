@@ -247,8 +247,8 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
         images,
         sizes: sizes.length > 0 ? sizes : null,
         materials: materials.length > 0 ? materials : null,
-        category_id: selectedCategoryId || null,
-        subcategory_id: selectedSubcategoryId || null,
+        category_id: selectedCategoryId ? String(selectedCategoryId) : null,
+        subcategory_id: selectedSubcategoryId ? String(selectedSubcategoryId) : null,
       };
 
       if (product) {
@@ -259,6 +259,14 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
 
         if (error) {
           console.error('Error updating product:', error);
+          if (error.code === '23505') {
+            toast({
+              title: "Slug duplicado",
+              description: "Este slug ya existe. Por favor elige otro.",
+              variant: "destructive",
+            });
+            return;
+          }
           toast({
             title: "Error",
             description: "Failed to update product",
@@ -278,6 +286,14 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
 
         if (error) {
           console.error('Error creating product:', error);
+          if (error.code === '23505') {
+            toast({
+              title: "Slug duplicado", 
+              description: "Este slug ya existe. Por favor elige otro.",
+              variant: "destructive",
+            });
+            return;
+          }
           toast({
             title: "Error",
             description: "Failed to create product",
@@ -554,7 +570,7 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
                 <div>
                   <Label htmlFor="category_id">Legacy Category (Optional)</Label>
                   <Select
-                    value={selectedCategoryId}
+                    value={selectedCategoryId ?? ''}
                     onValueChange={setSelectedCategoryId}
                     disabled={loadingCategories}
                   >
@@ -564,7 +580,7 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
                     <SelectContent>
                       <SelectItem value="">No category</SelectItem>
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
+                        <SelectItem key={category.id} value={String(category.id)}>
                           {category.name}
                         </SelectItem>
                       ))}
@@ -574,7 +590,7 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
                 <div>
                   <Label htmlFor="subcategory_id">Subcategory (Recommended)</Label>
                   <Select
-                    value={selectedSubcategoryId}
+                    value={selectedSubcategoryId ?? ''}
                     onValueChange={setSelectedSubcategoryId}
                     disabled={loadingCategories}
                   >
@@ -584,7 +600,7 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
                     <SelectContent>
                       <SelectItem value="">No subcategory</SelectItem>
                       {subcategories.map((subcategory) => (
-                        <SelectItem key={subcategory.id} value={subcategory.id}>
+                        <SelectItem key={subcategory.id} value={String(subcategory.id)}>
                           {getSubcategoryDisplayName(subcategory)}
                         </SelectItem>
                       ))}

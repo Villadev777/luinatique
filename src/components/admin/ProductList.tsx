@@ -134,9 +134,9 @@ export const ProductList = ({ products, onEdit, onDelete }: ProductListProps) =>
                 </TableCell>
                 <TableCell>
                   <div className="space-y-1">
-                    {product.featured && (
+                    {product.featured ? (
                       <Badge variant="outline">Featured</Badge>
-                    )}
+                    ) : null}
                   </div>
                 </TableCell>
                 <TableCell>{formatDate(product.created_at)}</TableCell>
