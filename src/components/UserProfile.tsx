@@ -72,39 +72,19 @@ export const UserProfile: React.FC = () => {
           </div>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => {
-          toast({
-            title: "Feature Coming Soon",
-            description: "Your profile page is under construction!",
-          });
-        }}>
+        <DropdownMenuItem onClick={() => navigate('/profile')}>
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => {
-          toast({
-            title: "Feature Coming Soon",
-            description: "Your favorites list is under construction!",
-          });
-        }}>
+        <DropdownMenuItem onClick={() => navigate('/favorites')}>
           <Heart className="mr-2 h-4 w-4" />
           <span>Favorites</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => {
-          toast({
-            title: "Feature Coming Soon",
-            description: "Your order history is under construction!",
-          });
-        }}>
+        <DropdownMenuItem onClick={() => navigate('/orders')}>
           <ShoppingBag className="mr-2 h-4 w-4" />
           <span>Orders</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => {
-          toast({
-            title: "Feature Coming Soon",
-            description: "Your settings page is under construction!",
-          });
-        }}>
+        <DropdownMenuItem onClick={() => navigate('/settings')}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
         </DropdownMenuItem>

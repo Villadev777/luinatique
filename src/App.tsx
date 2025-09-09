@@ -16,6 +16,10 @@ import Lunatique from "./pages/Lunatique";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import ProfilePage from "./pages/ProfilePage";
+import FavoritesPage from "./pages/FavoritesPage";
+import OrdersPage from "./pages/OrdersPage";
+import SettingsPage from "./pages/SettingsPage";
 import Anillos from "./pages/categories/Anillos";
 import Aretes from "./pages/categories/Aretes";
 import Collares from "./pages/categories/Collares";
@@ -46,6 +50,12 @@ const App = () => (
               <Route path="/lunatique" element={<Lunatique />} />
               <Route path="/contactanos" element={<Contact />} />
               <Route path="/admin" element={<Admin />} />
+              
+              {/* User Account Pages */}
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/favorites" element={<FavoritesPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               
               {/* Category Pages */}
               <Route path="/shop/anillos" element={<Anillos />} />
