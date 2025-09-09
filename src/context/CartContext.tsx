@@ -35,6 +35,12 @@ interface CartContextType {
   clearCart: () => void;
   getItemQuantity: (id: string) => number;
   isInCart: (id: string) => boolean;
+  getTotalItems: () => number;
+  getCartSummary: () => {
+    subtotal: number;
+    totalItems: number;
+    uniqueItems: number;
+  };
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -202,6 +208,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isInCart = (id: string): boolean => {
     return state.items.some(item => item.id === id);
   };
+
+  const getTotalItems = (): number => {
+    return state.totalItems;
+  };
+
+  const getCartSummary = () => {
+    return {
+      subtotal: state.totalPrice,
+      totalItems: state.totalItems,
+      uniqueItems: state.items.length,
+    };
+  };
   const value: CartContextType = {
     state,
     addItem,
@@ -212,6 +230,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearCart,
     getItemQuantity,
     isInCart,
+    getTotalItems,
+    getCartSummary,
   };
 
   return (

@@ -128,6 +128,19 @@ const Shop = () => {
   };
 
   const handleAddToCart = (product: Product) => {
+    // Verificar si el producto ya está en el carrito
+    if (isInCart(product.id)) {
+      toast({
+        title: "Product updated",
+        description: `Added another ${product.name} to your cart.`,
+      });
+    } else {
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+      });
+    }
+
     const cartItem = {
       id: product.id,
       name: product.name,
@@ -138,11 +151,6 @@ const Shop = () => {
     };
 
     addItem(cartItem);
-    
-    toast({
-      title: "Added to cart",
-      description: `${product.name} has been added to your cart.`,
-    });
   };
 
   const getDisplayPrice = (product: Product) => {

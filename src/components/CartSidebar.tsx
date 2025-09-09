@@ -2,6 +2,7 @@ import React from 'react';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Sheet,
   SheetContent,
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/sheet';
 import { ShoppingBag, Plus, Minus, Trash2, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 interface CartSidebarProps {
   children: React.ReactNode;
@@ -19,6 +21,10 @@ interface CartSidebarProps {
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
   const { state, increaseQuantity, decreaseQuantity, removeItem, clearCart } = useCart();
+  const { toast } = useToast();
+  const [promoCode, setPromoCode] = React.useState('');
+  const [appliedPromo, setAppliedPromo] = React.useState<string | null>(null);
+  const [discount, setDiscount] = React.useState(0);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -30,6 +36,47 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
   const getItemPrice = (item: any) => {
     return item.sale_price || item.price;
   };
+
+  const handleApplyPromo = () => {
+    // Simulamos algunos códigos promocionales
+    const promoCodes = {
+      'WELCOME10': 0.10,
+      'SAVE20': 0.20,
+      'FIRST15': 0.15,
+    };
+
+    const discountRate = promoCodes[promoCode.toUpperCase() as keyof typeof promoCodes];
+    
+    if (discountRate) {
+      setAppliedPromo(promoCode.toUpperCase());
+      setDiscount(state.totalPrice * discountRate);
+      setPromoCode('');
+      toast({
+        title: "Promo code applied!",
+        description: `You saved ${(discountRate * 100).toFixed(0)}% on your order.`,
+      });
+    } else {
+      toast({
+        title: "Invalid promo code",
+        description: "Please check your code and try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setDiscount(0);
+    toast({
+      title: "Promo code removed",
+      description: "The discount has been removed from your order.",
+    });
+  };
+
+  const subtotal = state.totalPrice;
+  const shipping = subtotal >= 50 ? 0 : 9.99;
+  const tax = (subtotal - discount) * 0.08; // 8% tax
+  const finalTotal = subtotal - discount + shipping + tax;
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -145,18 +192,69 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
 
               <Separator className="my-4" />
               <div className="border-t pt-4 space-y-4">
+                {/* Promo Code Section */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Promo Code</h4>
+                  {appliedPromo ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          {appliedPromo}
+                        </Badge>
+                        <span className="text-sm text-green-700 dark:text-green-300">
+                          -{formatPrice(discount)}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemovePromo}
+                        className="h-6 w-6 p-0 text-green-700 hover:text-green-900 dark:text-green-300"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter promo code"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        className="flex-1"
+                        onKeyPress={(e) => e.key === 'Enter' && handleApplyPromo()}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleApplyPromo}
+                        disabled={!promoCode.trim()}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
-                    <span>{formatPrice(state.totalPrice)}</span>
+                    <span>{formatPrice(subtotal)}</span>
                   </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                      <span>Discount ({appliedPromo}):</span>
+                      <span>-{formatPrice(discount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Shipping:</span>
-                    <span>Calculated at checkout</span>
+                    <span>{shipping === 0 ? 'FREE' : formatPrice(shipping)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Tax:</span>
-                    <span>Calculated at checkout</span>
+                    <span>{formatPrice(tax)}</span>
                   </div>
                 </div>
                 
@@ -165,7 +263,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
                 <div className="flex justify-between items-center">
                   <span className="text-base font-semibold">Total:</span>
                   <span className="text-lg font-bold">
-                    {formatPrice(state.totalPrice)}
+                    {formatPrice(finalTotal)}
                   </span>
                 </div>
                 
@@ -195,6 +293,13 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
                 <p className="text-xs text-muted-foreground text-center">
                   Free shipping on orders over $50
                 </p>
+                
+                {/* Estimated delivery */}
+                <div className="text-center p-3 bg-muted/50 rounded-md">
+                  <p className="text-xs text-muted-foreground">
+                    📦 Estimated delivery: 3-5 business days
+                  </p>
+                </div>
               </div>
             </>
           )}
