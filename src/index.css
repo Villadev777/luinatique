@@ -171,6 +171,22 @@ All colors MUST be HSL.
   animation: slide-in 0.5s ease-out;
 }
 
+/* Hero carousel animations */
+@keyframes slide-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-fade-in {
+  animation: slide-fade-in 0.8s ease-out;
+}
+
 /* Fix z-index stacking context */
 .sheet-overlay {
   z-index: 50;
