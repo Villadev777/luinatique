@@ -578,7 +578,6 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
                       <SelectValue placeholder={loadingCategories ? "Loading..." : "Select legacy category"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No category</SelectItem>
                       {categories.map((category) => (
                         <SelectItem key={category.id} value={String(category.id)}>
                           {category.name}
@@ -598,7 +597,6 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
                       <SelectValue placeholder={loadingCategories ? "Loading..." : "Select subcategory"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No subcategory</SelectItem>
                       {subcategories.map((subcategory) => (
                         <SelectItem key={subcategory.id} value={String(subcategory.id)}>
                           {getSubcategoryDisplayName(subcategory)}
