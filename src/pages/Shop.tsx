@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import { useCategories } from "@/hooks/useCategories";
 import Footer from "@/components/Footer";
@@ -43,9 +43,56 @@ const Shop = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
   const { toast } = useToast();
   const { addItem, isInCart, getItemQuantity } = useCart();
-  const { getShopCategories } = useCategories();
+  const { getShopCategories, navigationStructure } = useCategories();
+  const { categorySlug, subcategorySlug } = useParams();
+
+  // Initialize filters based on URL parameters
+  useEffect(() => {
+    if (!navigationStructure.length || !initializing) return;
+
+    const shopData = getShopCategories();
+    if (!shopData) {
+      setInitializing(false);
+      return;
+    }
+
+    // Find category by slug
+    if (categorySlug) {
+      const foundSection = shopData.sections.find(({ section }) => 
+        section.slug === categorySlug
+      );
+      
+      if (foundSection) {
+        setSelectedCategory(foundSection.section.id);
+        
+        // Find subcategory by slug if provided
+        if (subcategorySlug) {
+          const foundSubcategory = foundSection.subcategories.find(sub => 
+            sub.slug === subcategorySlug
+          );
+          
+          if (foundSubcategory) {
+            setSelectedSubcategory(foundSubcategory.id);
+          }
+        } else {
+          setSelectedSubcategory("all");
+        }
+      } else {
+        // If category not found, reset to all
+        setSelectedCategory("all");
+        setSelectedSubcategory("all");
+      }
+    } else {
+      // No category in URL, show all products
+      setSelectedCategory("all");
+      setSelectedSubcategory("all");
+    }
+
+    setInitializing(false);
+  }, [categorySlug, subcategorySlug, navigationStructure, getShopCategories, initializing]);
 
   const fetchProducts = async () => {
     try {
@@ -108,10 +155,26 @@ const Shop = () => {
 
   const filteredProducts = products.filter(product => {
     if (selectedCategory === "all") return true;
-    if (selectedSubcategory === "all") {
-      return product.category_id === selectedCategory;
+    
+    // Filter by subcategory if selected
+    if (selectedSubcategory !== "all") {
+      return product.subcategory_id === selectedSubcategory;
     }
-    return product.subcategory_id === selectedSubcategory;
+    
+    // Filter by category section if no subcategory selected
+    // We need to check if the product belongs to any subcategory within this section
+    const shopData = getShopCategories();
+    if (!shopData) return false;
+    
+    const selectedSection = shopData.sections.find(({ section }) => 
+      section.id === selectedCategory
+    );
+    
+    if (!selectedSection) return false;
+    
+    // Check if product belongs to any subcategory in this section
+    const subcategoryIds = selectedSection.subcategories.map(sub => sub.id);
+    return subcategoryIds.includes(product.subcategory_id || '');
   });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -178,12 +241,49 @@ const Shop = () => {
         {/* Hero Section */}
         <section className="bg-sage/10 py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            {categorySlug ? (
+              <div>
+                <h1 className="font-playfair text-4xl md:text-5xl font-semibold text-foreground mb-4">
+                  {(() => {
+                    const shopData = getShopCategories();
+                    if (!shopData) return "Tienda Lunatiquê";
+                    
+                    const section = shopData.sections.find(({ section }) => section.slug === categorySlug);
+                    if (!section) return "Tienda Lunatiquê";
+                    
+                    if (subcategorySlug) {
+                      const subcategory = section.subcategories.find(sub => sub.slug === subcategorySlug);
+                      return subcategory ? subcategory.name : section.section.name;
+                    }
+                    
+                    return section.section.name;
+                  })()}
+                </h1>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                  {(() => {
+                    const shopData = getShopCategories();
+                    if (!shopData) return "Descubre nuestras piezas de joyería artesanal.";
+                    
+                    const section = shopData.sections.find(({ section }) => section.slug === categorySlug);
+                    if (!section) return "Descubre nuestras piezas de joyería artesanal.";
+                    
+                    if (subcategorySlug) {
+                      const subcategory = section.subcategories.find(sub => sub.slug === subcategorySlug);
+                      return subcategory?.description || section.section.description || "Descubre nuestras piezas de joyería artesanal.";
+                    }
+                    
+                    return section.section.description || "Descubre nuestras piezas de joyería artesanal.";
+                  })()}
+                </p>
+              </div>
+            ) : (
             <h1 className="font-playfair text-4xl md:text-5xl font-semibold text-foreground mb-4">
               Tienda Lunatiquê
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Descubre nuestras piezas de joyería artesanal, cada una diseñada con técnicas únicas y materiales de calidad.
             </p>
+            )}
           </div>
         </section>
 
@@ -195,7 +295,11 @@ const Shop = () => {
                 <Button
                   variant={selectedCategory === "all" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedCategory("all")}
+                  onClick={() => {
+                    setSelectedCategory("all");
+                    setSelectedSubcategory("all");
+                    window.history.pushState({}, '', '/shop');
+                  }}
                 >
                   Todos los Productos
                 </Button>
@@ -207,6 +311,7 @@ const Shop = () => {
                       onClick={() => {
                         setSelectedCategory(section.id);
                         setSelectedSubcategory("all");
+                        window.history.pushState({}, '', `/shop/${section.slug}`);
                       }}
                     >
                       {section.name}
@@ -216,7 +321,10 @@ const Shop = () => {
                         key={subcategory.id}
                         variant={selectedSubcategory === subcategory.id ? "secondary" : "ghost"}
                         size="sm"
-                        onClick={() => setSelectedSubcategory(subcategory.id)}
+                        onClick={() => {
+                          setSelectedSubcategory(subcategory.id);
+                          window.history.pushState({}, '', `/shop/${section.slug}/${subcategory.slug}`);
+                        }}
                       >
                         {subcategory.name}
                       </Button>
@@ -248,15 +356,36 @@ const Shop = () => {
         {/* Products Grid */}
         <section className="py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {loading ? (
+            {loading || initializing ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                 <p className="text-muted-foreground">Cargando productos...</p>
               </div>
             ) : sortedProducts.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">No se encontraron productos</p>
-                <p className="text-sm text-muted-foreground">Intenta ajustar los filtros o revisa más tarde para nuevos productos</p>
+                <p className="text-muted-foreground mb-4">
+                  {selectedCategory === "all" 
+                    ? "No hay productos disponibles" 
+                    : "No se encontraron productos en esta categoría"
+                  }
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedCategory === "all"
+                    ? "Revisa más tarde para nuevos productos"
+                    : "Intenta explorar otras categorías o revisa más tarde"
+                  }
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => {
+                    setSelectedCategory("all");
+                    setSelectedSubcategory("all");
+                    window.history.pushState({}, '', '/shop');
+                  }}
+                >
+                  Ver Todos los Productos
+                </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
