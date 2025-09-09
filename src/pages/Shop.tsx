@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/context/CartContext";
+import { Heart, ShoppingCart, Eye } from "lucide-react";
 
 interface Product {
   id: string;
@@ -40,7 +41,7 @@ const Shop = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { addItem } = useCart();
+  const { addItem, isInCart, getItemQuantity } = useCart();
 
   const fetchProducts = async () => {
     try {
@@ -143,6 +144,15 @@ const Shop = () => {
       description: `${product.name} has been added to your cart.`,
     });
   };
+
+  const getDisplayPrice = (product: Product) => {
+    return product.sale_price || product.price;
+  };
+
+  const hasDiscount = (product: Product) => {
+    return product.sale_price && product.sale_price < product.price;
+  };
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -219,32 +229,73 @@ const Shop = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {sortedProducts.map((product) => (
-                  <Card key={product.id} className="group cursor-pointer overflow-hidden">
+                  <Card key={product.id} className="group cursor-pointer overflow-hidden hover:shadow-lg transition-all duration-300">
                     <div className="relative aspect-square overflow-hidden">
                       <img
                         src={product.images.length > 0 ? product.images[0] : '/placeholder.svg'}
                         alt={product.name}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
-                      {product.featured && (
-                        <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground">
-                          Featured
-                        </Badge>
-                      )}
-                      {product.sale_price && (
-                        <Badge className="absolute top-4 right-4 bg-destructive text-destructive-foreground">
-                          Sale
-                        </Badge>
+                      
+                      {/* Badges */}
+                      <div className="absolute top-4 left-4 flex flex-col gap-2">
+                        {product.featured && (
+                          <Badge className="bg-primary text-primary-foreground">
+                            Featured
+                          </Badge>
+                        )}
+                        {hasDiscount(product) && (
+                          <Badge className="bg-destructive text-destructive-foreground">
+                            Sale
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Add to favorites functionality
+                          }}
+                        >
+                          <Heart className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Quick view functionality
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Stock indicator */}
+                      {product.stock_quantity <= 5 && product.stock_quantity > 0 && (
+                        <div className="absolute bottom-4 left-4">
+                          <Badge variant="outline" className="bg-background/80 backdrop-blur-sm">
+                            Only {product.stock_quantity} left
+                          </Badge>
+                        </div>
                       )}
                     </div>
+                    
                     <CardContent className="p-6">
                       <h3 className="font-playfair text-xl font-semibold mb-2">{product.name}</h3>
                       <p className="text-muted-foreground mb-3 line-clamp-2">
                         {product.description}
                       </p>
-                      <div className="flex justify-between items-center">
+                      
+                      <div className="flex justify-between items-end">
                         <div className="flex flex-col">
-                          {product.sale_price ? (
+                          {hasDiscount(product) ? (
                             <>
                               <span className="text-sm line-through text-muted-foreground">
                                 {formatPrice(product.price)}
@@ -257,13 +308,23 @@ const Shop = () => {
                             <span className="text-lg font-semibold">{formatPrice(product.price)}</span>
                           )}
                         </div>
-                        <Button 
-                          size="sm" 
-                          disabled={!product.in_stock}
-                          onClick={() => handleAddToCart(product)}
-                        >
-                          {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
-                        </Button>
+                        
+                        <div className="flex flex-col gap-2">
+                          {isInCart(product.id) && (
+                            <div className="text-xs text-center text-muted-foreground">
+                              {getItemQuantity(product.id)} in cart
+                            </div>
+                          )}
+                          <Button 
+                            size="sm" 
+                            disabled={!product.in_stock}
+                            onClick={() => handleAddToCart(product)}
+                            className="flex items-center gap-2"
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                            {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

@@ -85,10 +85,13 @@ const Header = () => {
               <Button variant="ghost" size="sm" className="relative">
                 <ShoppingBag className="h-4 w-4" />
                 {state.totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                     {state.totalItems}
                   </span>
                 )}
+                <span className="sr-only">
+                  Shopping cart with {state.totalItems} items
+                </span>
               </Button>
             </CartSidebar>
           </div>
