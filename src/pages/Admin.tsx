@@ -5,6 +5,9 @@ import { useAdmin } from '@/hooks/useAdmin';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ProductManagement } from '@/components/admin/ProductManagement';
+import { CategoryManagement } from '@/components/admin/CategoryManagement';
+import { UserManagement } from '@/components/admin/UserManagement';
+import { Analytics } from '@/components/admin/Analytics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, FolderOpen, Users, BarChart3 } from 'lucide-react';
@@ -80,39 +83,15 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="categories">
-            <Card>
-              <CardHeader>
-                <CardTitle>Category Management</CardTitle>
-                <CardDescription>Manage product categories</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Category management coming soon...</p>
-              </CardContent>
-            </Card>
+            <CategoryManagement />
           </TabsContent>
 
           <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage user accounts and roles</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">User management coming soon...</p>
-              </CardContent>
-            </Card>
+            <UserManagement />
           </TabsContent>
 
           <TabsContent value="analytics">
-            <Card>
-              <CardHeader>
-                <CardTitle>Analytics</CardTitle>
-                <CardDescription>View store performance metrics</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Analytics coming soon...</p>
-              </CardContent>
-            </Card>
+            <Analytics />
           </TabsContent>
         </Tabs>
       </main>

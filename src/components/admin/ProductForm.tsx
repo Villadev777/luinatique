@@ -472,6 +472,38 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
               )}
             </div>
 
+            {/* Category Selection */}
+            <div className="space-y-4">
+              <Label>Category Assignment</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="category_id">Legacy Category (Optional)</Label>
+                  <select
+                    id="category_id"
+                    className="w-full h-10 px-3 py-2 border border-input rounded-md bg-background"
+                    defaultValue=""
+                  >
+                    <option value="">Select legacy category</option>
+                    {/* Legacy categories would be populated here */}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="subcategory_id">Subcategory (Recommended)</Label>
+                  <select
+                    id="subcategory_id"
+                    className="w-full h-10 px-3 py-2 border border-input rounded-md bg-background"
+                    defaultValue=""
+                  >
+                    <option value="">Select subcategory</option>
+                    {/* Subcategories would be populated here */}
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Assign products to subcategories for better organization and navigation.
+              </p>
+            </div>
+
             {/* Materials */}
             <div className="space-y-4">
               <Label>Materials</Label>
