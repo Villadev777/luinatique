@@ -40,7 +40,7 @@ interface Product {
   description: string | null;
   price: number;
   sale_price: number | null;
-  images: string[];
+  images: string[] | null;
   in_stock: boolean;
   stock_quantity: number;
   featured: boolean;

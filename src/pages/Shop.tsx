@@ -18,7 +18,7 @@ interface Product {
   description: string | null;
   price: number;
   sale_price: number | null;
-  images: string[];
+  images: string[] | null;
   in_stock: boolean;
   stock_quantity: number;
   featured: boolean;
@@ -219,7 +219,7 @@ const Shop = () => {
       name: product.name,
       price: product.price,
       sale_price: product.sale_price,
-      image: product.images.length > 0 ? product.images[0] : '/placeholder.svg',
+      image: product.images && product.images.length > 0 ? product.images[0] : '/placeholder.svg',
       slug: product.slug,
     };
 
@@ -394,7 +394,7 @@ const Shop = () => {
                     <Link to={`/product/${product.slug}`} className="block">
                     <div className="relative aspect-square overflow-hidden">
                       <img
-                        src={product.images.length > 0 ? product.images[0] : '/placeholder.svg'}
+                        src={product.images && product.images.length > 0 ? product.images[0] : '/placeholder.svg'}
                         alt={product.name}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />

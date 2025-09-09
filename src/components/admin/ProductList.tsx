@@ -28,7 +28,7 @@ interface Product {
   description: string | null;
   price: number;
   sale_price: number | null;
-  images: string[];
+  images: string[] | null;
   in_stock: boolean;
   stock_quantity: number;
   featured: boolean;
@@ -88,7 +88,7 @@ export const ProductList = ({ products, onEdit, onDelete }: ProductListProps) =>
               <TableRow key={product.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    {product.images.length > 0 && (
+                    {product.images && product.images.length > 0 && (
                       <img
                         src={product.images[0]}
                         alt={product.name}

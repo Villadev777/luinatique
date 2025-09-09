@@ -10,7 +10,7 @@ interface Product {
   name: string;
   price: number;
   sale_price?: number | null;
-  images: string[];
+  images: string[] | null;
   slug: string;
   in_stock: boolean;
   sizes?: string[] | null;
@@ -52,7 +52,7 @@ export const QuickAddToCart: React.FC<QuickAddToCartProps> = ({
       name: product.name,
       price: product.price,
       sale_price: product.sale_price,
-      image: product.images.length > 0 ? product.images[0] : '/placeholder.svg',
+      image: product.images && product.images.length > 0 ? product.images[0] : '/placeholder.svg',
       slug: product.slug,
     };
 

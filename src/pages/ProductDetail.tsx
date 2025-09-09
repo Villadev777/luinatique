@@ -18,7 +18,7 @@ interface Product {
   description: string | null;
   price: number;
   sale_price: number | null;
-  images: string[];
+  images: string[] | null;
   in_stock: boolean;
   stock_quantity: number;
   featured: boolean;
@@ -123,7 +123,7 @@ const ProductDetail = () => {
       name: product.name,
       price: product.price,
       sale_price: product.sale_price,
-      image: product.images.length > 0 ? product.images[0] : '/placeholder.svg',
+      image: product.images && product.images.length > 0 ? product.images[0] : '/placeholder.svg',
       slug: product.slug,
       selectedSize: selectedSize || undefined,
       selectedMaterial: selectedMaterial || undefined,
@@ -205,14 +205,14 @@ const ProductDetail = () => {
             {/* Main Image */}
             <div className="aspect-square overflow-hidden rounded-lg bg-muted">
               <img
-                src={product.images[selectedImage] || '/placeholder.svg'}
+                src={product.images && product.images[selectedImage] ? product.images[selectedImage] : '/placeholder.svg'}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
             </div>
 
             {/* Thumbnail Images */}
-            {product.images.length > 1 && (
+            {product.images && product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
                 {product.images.map((image, index) => (
                   <button
