@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -9,18 +10,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, Settings, Heart, ShoppingBag, LogOut, Home } from 'lucide-react';
+import { User, Settings, Heart, ShoppingBag, LogOut, Home, Shield } from 'lucide-react';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
 export const UserProfile: React.FC = () => {
   const { user, signOut, loading } = useAuth();
+  const { isAdmin, loading: adminLoading } = useAdmin();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  if (loading) {
+  if (loading || adminLoading) {
     return (
       <div className="flex items-center space-x-2">
         <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
@@ -84,6 +86,12 @@ export const UserProfile: React.FC = () => {
           <ShoppingBag className="mr-2 h-4 w-4" />
           <span>Orders</span>
         </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem onClick={() => navigate('/admin')}>
+            <Shield className="mr-2 h-4 w-4" />
+            <span>Admin Dashboard</span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => navigate('/settings')}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
