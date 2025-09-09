@@ -133,7 +133,7 @@ const Header = () => {
                         {navItem.sections.map(({ section, subcategories }) => (
                           <div key={section.id}>
                             <a
-                              href={`/${navItem.mainCategory.slug}/${section.slug}`}
+                              href={`/shop/${section.slug}`}
                               className="block py-1 text-xs text-muted-foreground hover:text-primary transition-colors"
                               onClick={() => setIsMenuOpen(false)}
                             >
@@ -144,7 +144,7 @@ const Header = () => {
                                 {subcategories.map((subcategory) => (
                                   <a
                                     key={subcategory.id}
-                                    href={`/${navItem.mainCategory.slug}/${section.slug}/${subcategory.slug}`}
+                                    href={`/shop/${section.slug}/${subcategory.slug}`}
                                     className="block py-1 text-xs text-muted-foreground hover:text-primary transition-colors"
                                     onClick={() => setIsMenuOpen(false)}
                                   >
