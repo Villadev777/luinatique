@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import { useCategories } from "@/hooks/useCategories";
 import Footer from "@/components/Footer";
@@ -260,7 +261,8 @@ const Shop = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {sortedProducts.map((product) => (
-                  <Card key={product.id} className="group cursor-pointer overflow-hidden hover:shadow-lg transition-all duration-300">
+                  <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-all duration-300">
+                    <Link to={`/product/${product.slug}`} className="block">
                     <div className="relative aspect-square overflow-hidden">
                       <img
                         src={product.images.length > 0 ? product.images[0] : '/placeholder.svg'}
@@ -317,12 +319,15 @@ const Shop = () => {
                         </div>
                       )}
                     </div>
+                    </Link>
                     
                     <CardContent className="p-6">
+                      <Link to={`/product/${product.slug}`} className="block">
                       <h3 className="font-playfair text-xl font-semibold mb-2">{product.name}</h3>
                       <p className="text-muted-foreground mb-3 line-clamp-2">
                         {product.description}
                       </p>
+                      </Link>
                       
                       <div className="flex justify-between items-end">
                         <div className="flex flex-col">
@@ -349,7 +354,11 @@ const Shop = () => {
                           <Button 
                             size="sm" 
                             disabled={!product.in_stock}
-                            onClick={() => handleAddToCart(product)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleAddToCart(product);
+                            }}
                             className="flex items-center gap-2"
                           >
                             <ShoppingCart className="h-4 w-4" />

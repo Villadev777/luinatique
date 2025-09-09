@@ -48,15 +48,12 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case 'ADD_ITEM': {
-      // Create a unique key for the item including size and material
-      const itemKey = `${action.payload.id}-${action.payload.selectedSize || ''}-${action.payload.selectedMaterial || ''}`;
-      const existingItem = state.items.find(item => 
-        `${item.id}-${item.selectedSize || ''}-${item.selectedMaterial || ''}` === itemKey
-      );
+      // Use the provided ID which should already include size/material variations
+      const existingItem = state.items.find(item => item.id === action.payload.id);
       
       if (existingItem) {
         const updatedItems = state.items.map(item =>
-          `${item.id}-${item.selectedSize || ''}-${item.selectedMaterial || ''}` === itemKey
+          item.id === action.payload.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );

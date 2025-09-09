@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/context/CartContext";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
 import Collections from "./pages/Collections";
 import Story from "./pages/Story";
 import Journal from "./pages/Journal";
@@ -26,6 +27,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/shop" element={<Shop />} />
+              <Route path="/product/:productSlug" element={<ProductDetail />} />
               <Route path="/collections" element={<Collections />} />
               <Route path="/story" element={<Story />} />
               <Route path="/journal" element={<Journal />} />
