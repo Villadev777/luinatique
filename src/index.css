@@ -170,3 +170,18 @@ All colors MUST be HSL.
 .animate-slide-in {
   animation: slide-in 0.5s ease-out;
 }
+
+/* Fix z-index stacking context */
+.sheet-overlay {
+  z-index: 50;
+}
+
+.sheet-content {
+  z-index: 60;
+}
+
+/* Ensure hero content doesn't interfere with overlays */
+.hero-section {
+  position: relative;
+  z-index: 0;
+}

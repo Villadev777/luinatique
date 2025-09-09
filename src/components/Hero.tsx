@@ -3,7 +3,7 @@ import heroImage from "@/assets/hero-jewelry.jpg";
 
 const Hero = () => {
   return (
-    <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden z-0">
       {/* Background Image */}
       <div className="absolute inset-0">
         <img
@@ -15,7 +15,7 @@ const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 text-center max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 text-center max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pointer-events-none">
         <div className="animate-fade-in">
           <h2 className="font-playfair text-4xl md:text-6xl lg:text-7xl font-semibold text-white mb-6 leading-tight">
             Modern jewelry
@@ -30,7 +30,7 @@ const Hero = () => {
           <Button 
             size="lg" 
             variant="secondary"
-            className="bg-sage text-sage-foreground hover:bg-sage/90 px-8 py-6 text-base font-medium tracking-wide transition-all duration-300 hover:scale-105"
+            className="bg-sage text-sage-foreground hover:bg-sage/90 px-8 py-6 text-base font-medium tracking-wide transition-all duration-300 hover:scale-105 pointer-events-auto"
           >
             SHOP NEW ARRIVALS
           </Button>
