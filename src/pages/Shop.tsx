@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/context/CartContext";
 
 interface Product {
   id: string;
@@ -39,6 +40,7 @@ const Shop = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { addItem } = useCart();
 
   const fetchProducts = async () => {
     try {
@@ -124,6 +126,23 @@ const Shop = () => {
     }).format(price);
   };
 
+  const handleAddToCart = (product: Product) => {
+    const cartItem = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      sale_price: product.sale_price,
+      image: product.images.length > 0 ? product.images[0] : '/placeholder.svg',
+      slug: product.slug,
+    };
+
+    addItem(cartItem);
+    
+    toast({
+      title: "Added to cart",
+      description: `${product.name} has been added to your cart.`,
+    });
+  };
   return (
     <div className="min-h-screen">
       <Header />
@@ -238,7 +257,11 @@ const Shop = () => {
                             <span className="text-lg font-semibold">{formatPrice(product.price)}</span>
                           )}
                         </div>
-                        <Button size="sm" disabled={!product.in_stock}>
+                        <Button 
+                          size="sm" 
+                          disabled={!product.in_stock}
+                          onClick={() => handleAddToCart(product)}
+                        >
                           {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
                         </Button>
                       </div>

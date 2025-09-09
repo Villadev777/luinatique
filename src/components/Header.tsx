@@ -3,10 +3,13 @@ import { Search, ShoppingBag, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserProfile } from "@/components/UserProfile";
+import { CartSidebar } from "@/components/CartSidebar";
+import { useCart } from "@/context/CartContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { state } = useCart();
 
   const navigation = [
     { name: "SHOP", href: "/shop" },
@@ -78,12 +81,16 @@ const Header = () => {
             <div className="hidden md:flex">
               <UserProfile />
             </div>
-            <Button variant="ghost" size="sm" className="relative">
-              <ShoppingBag className="h-4 w-4" />
-              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                0
-              </span>
-            </Button>
+            <CartSidebar>
+              <Button variant="ghost" size="sm" className="relative">
+                <ShoppingBag className="h-4 w-4" />
+                {state.totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {state.totalItems}
+                  </span>
+                )}
+              </Button>
+            </CartSidebar>
           </div>
         </div>
 
