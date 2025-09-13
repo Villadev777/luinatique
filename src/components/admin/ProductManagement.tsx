@@ -20,6 +20,7 @@ interface Product {
   category_id: string | null;
   sizes: string[] | null;
   materials: string[] | null;
+  colors: string[] | null; // ← Agregar esta línea
   slug: string;
   created_at: string;
   updated_at: string;
