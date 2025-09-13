@@ -66,7 +66,7 @@ const Header = () => {
 
           {/* Center - Brand Logo */}
           <div className="absolute left-1/2 transform -translate-x-1/2">
-            <h1 className="font-playfair text-2xl font-semibold tracking-wide">
+            <h1 className="font-playfair display text-2xl font-semibold tracking-wide">
               Lunatiquê
             </h1>
           </div>
