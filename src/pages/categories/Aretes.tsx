@@ -196,7 +196,7 @@ const Aretes = () => {
         <section className="py-20 bg-luxury/10">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="font-playfair text-4xl md:text-6xl font-semibold text-foreground mb-6">
-              {categoryInfo?.title || 'Arete'}
+              {categoryInfo?.title || 'Aretes'}
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
               {categoryInfo?.description || 'Encuentra el par perfecto de aretes para cada ocasión.'}
