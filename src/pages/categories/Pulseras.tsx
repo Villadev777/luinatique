@@ -33,7 +33,7 @@ const Pulseras = () => {
   const [categoryInfo, setCategoryInfo] = useState<{title: string; description: string} | null>(null);
 
   const subcategories = {
-    'hombre': {
+    'hombr': {
       title: 'Pulseras para Hombre',
       description: 'Pulseras masculinas con diseños robustos y elegantes, perfectas para el hombre moderno.',
     },
