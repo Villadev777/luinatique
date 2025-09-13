@@ -51,7 +51,7 @@ const Footer = () => {
             {/* Brand Section */}
             <div className="lg:col-span-1">
               <h3 className="font-playfair text-2xl font-semibold mb-4">
-                Lunatiquê
+                LUNATIQUÊ
               </h3>
               <p className="text-primary-foreground/80 leading-relaxed mb-6">
                 Crafting timeless jewelry pieces that celebrate life's most precious moments.
