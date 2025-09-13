@@ -130,7 +130,7 @@ SELECT
 FROM main_categories mc,
 (VALUES
   ('ANILLOS', 'anillos', 'Anillos artesanales en diversas técnicas', 1),
-  ('ARETE', 'aretes', 'Aretes únicos y elegantes', 2),
+  ('ARETES', 'aretes', 'Aretes únicos y elegantes', 2),
   ('COLLARES', 'collares', 'Collares artesanales con diseños exclusivos', 3),
   ('PULSERAS', 'pulseras', 'Pulseras para toda la familia', 4),
   ('LLAVEROS', 'llaveros', 'Llaveros decorativos y funcionales', 5),
