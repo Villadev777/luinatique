@@ -25,7 +25,7 @@ interface Product {
   created_at: string;
 }
 
-const Pulsera = () => {
+const Pulseras = () => {
   const { subcategory } = useParams();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
