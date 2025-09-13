@@ -4,33 +4,33 @@ import { Instagram, Facebook, Image, Mail } from "lucide-react";
 const Footer = () => {
   const footerSections = [
     {
-      title: "Shop",
+      title: "Tienda",
       links: [
-        { name: "New Arrivals", href: "/shop" },
-        { name: "Rings", href: "/shop" },
-        { name: "Necklaces", href: "/shop" },
-        { name: "Earrings", href: "/shop" },
-        { name: "Bracelets", href: "/shop" },
-        { name: "Sale", href: "/shop" }
+        { name: "Nuevos Arrivals", href: "/shop" },
+        { name: "Anillos", href: "/shop" },
+        { name: "Collares", href: "/shop" },
+        { name: "Aretes", href: "/shop" },
+        { name: "Pulseras", href: "/shop" },
+        { name: "Ofertas", href: "/shop" }
       ]
     },
     {
-      title: "About",
+      title: "Nosotros",
       links: [
-        { name: "Our Story", href: "/story" },
-        { name: "Craftsmanship", href: "/story" },
-        { name: "Sustainability", href: "/story" },
-        { name: "Journal", href: "/journal" }
+        { name: "Nuestra Historia", href: "/story" },
+        { name: "Artesanía", href: "/story" },
+        { name: "Sostenibilidad", href: "/story" },
+        { name: "Blog", href: "/journal" }
       ]
     },
     {
-      title: "Customer Care",
+      title: "Atención al Cliente",
       links: [
-        { name: "Contact Us", href: "#contact" },
-        { name: "Size Guide", href: "#size-guide" },
-        { name: "Care Instructions", href: "#care" },
-        { name: "Shipping & Returns", href: "#shipping" },
-        { name: "FAQ", href: "#faq" }
+        { name: "Contáctanos", href: "#contact" },
+        { name: "Guía de Tallas", href: "#size-guide" },
+        { name: "Instrucciones de Cuidado", href: "#care" },
+        { name: "Envíos y Devoluciones", href: "#shipping" },
+        { name: "Preguntas Frecuentes", href: "#faq" }
       ]
     }
   ];
@@ -39,7 +39,7 @@ const Footer = () => {
     { icon: Instagram, href: "#instagram", label: "Instagram" },
     { icon: Facebook, href: "#facebook", label: "Facebook" },
     { icon: Image, href: "#pinterest", label: "Pinterest" },
-    { icon: Mail, href: "#email", label: "Email" }
+    { icon: Mail, href: "#email", label: "Correo" }
   ];
 
   return (
@@ -101,18 +101,18 @@ const Footer = () => {
         <div className="border-t border-primary-foreground/20 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-primary-foreground/60 text-sm">
-              © 2024 Lunatiquê. All rights reserved.
+              © 2024 Lunatiquê. Todos los derechos reservados.
             </div>
             
             <div className="flex space-x-6 text-sm">
               <a href="#privacy" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
-                Privacy Policy
+                Política de Privacidad
               </a>
               <a href="#terms" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
-                Terms of Service
+                Términos de Servicio
               </a>
               <a href="#accessibility" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
-                Accessibility
+                Accesibilidad
               </a>
             </div>
           </div>
