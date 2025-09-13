@@ -56,6 +56,7 @@ interface Product {
   subcategory_id: string | null;
   sizes: string[] | null;
   materials: string[] | null;
+  colors: string[] | null; // ← Agregado
   slug: string;
 }
 
@@ -69,8 +70,10 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [sizes, setSizes] = useState<string[]>(product?.sizes || []);
   const [materials, setMaterials] = useState<string[]>(product?.materials || []);
+  const [colors, setColors] = useState<string[]>(product?.colors || []); // ← Agregado
   const [newSize, setNewSize] = useState('');
   const [newMaterial, setNewMaterial] = useState('');
+  const [newColor, setNewColor] = useState(''); // ← Agregado
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(product?.category_id || '');
@@ -233,6 +236,18 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
     setMaterials(prev => prev.filter(m => m !== material));
   };
 
+  // ← Funciones para Colors agregadas
+  const addColor = () => {
+    if (newColor.trim() && !colors.includes(newColor.trim())) {
+      setColors(prev => [...prev, newColor.trim()]);
+      setNewColor('');
+    }
+  };
+
+  const removeColor = (color: string) => {
+    setColors(prev => prev.filter(c => c !== color));
+  };
+
   const onSubmit = async (data: ProductFormData) => {
     try {
       const productData = {
@@ -247,6 +262,7 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
         images,
         sizes: sizes.length > 0 ? sizes : null,
         materials: materials.length > 0 ? materials : null,
+        colors: colors.length > 0 ? colors : null, // ← Agregado
         category_id: selectedCategoryId ? String(selectedCategoryId) : null,
         subcategory_id: selectedSubcategoryId ? String(selectedSubcategoryId) : null,
       };
@@ -553,6 +569,38 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
                       <button
                         type="button"
                         onClick={() => removeSize(size)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Colors - Nueva sección agregada */}
+            <div className="space-y-4">
+              <Label>Available Colors</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newColor}
+                  onChange={(e) => setNewColor(e.target.value)}
+                  placeholder="Add color (e.g., Red, Blue, Black, White, Rose Gold)"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addColor())}
+                />
+                <Button type="button" onClick={addColor} variant="outline">
+                  Add
+                </Button>
+              </div>
+              {colors.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {colors.map((color, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {color}
+                      <button
+                        type="button"
+                        onClick={() => removeColor(color)}
                         className="ml-1 hover:text-destructive"
                       >
                         <X className="h-3 w-3" />
