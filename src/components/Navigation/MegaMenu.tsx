@@ -40,7 +40,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ navigationData, className })
               <div className="grid w-[800px] grid-cols-3 gap-6 p-6">
                 {shopData.sections.map(({ section, subcategories }) => (
                   <div key={section.id} className="space-y-3">
-                    <h4 className="font-black text-sm text-primary uppercase tracking-wide">
+                    <h4 className="font-bold text-sm text-primary uppercase tracking-wide">
                       {section.name}
                     </h4>
                     <ul className="space-y-2">
@@ -148,7 +148,7 @@ const ListItem = React.forwardRef<
           )}
           {...props}
         >
-          <div className="text-sm font-bold leading-none">{title}</div>
+          <div className="text-base font-black leading-none">{title}</div>
           <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
             {children}
           </p>
