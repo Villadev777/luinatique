@@ -54,7 +54,7 @@ const Footer = () => {
                 LUNATIQUÊ
               </h3>
               <p className="text-primary-foreground/80 leading-relaxed mb-6">
-                Crafting timeless jewelry pieces that celebrate life's most precious moments.
+                Creando piezas únicas desde 2010.
               </p>
               
               <div className="flex space-x-4">
