@@ -64,7 +64,7 @@ const App = () => (
               <Route path="/shop/aretes/:subcategory" element={<Aretes />} />
               <Route path="/shop/collares" element={<Collares />} />
               <Route path="/shop/collares/:subcategory" element={<Collares />} />
-              <Route path="/shop/pulseras" element={<Pulseras />} />
+              <Route path="/shop/pulseras" element={<Pulsera />} />
               <Route path="/shop/pulseras/:subcategory" element={<Pulseras />} />
               <Route path="/shop/llaveros" element={<Llaveros />} />
               <Route path="/shop/llaveros/:subcategory" element={<Llaveros />} />
