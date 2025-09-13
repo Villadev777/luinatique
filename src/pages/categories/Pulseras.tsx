@@ -177,7 +177,7 @@ const Pulseras = () => {
                 Tienda
               </Button>
               <span>/</span>
-              <span>Pulsers</span>
+              <span>Pulseras</span>
               {categoryInfo && subcategory && (
                 <>
                   <span>/</span>
