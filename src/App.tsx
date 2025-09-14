@@ -26,6 +26,7 @@ import Collares from "./pages/categories/Collares";
 import Pulseras from "./pages/categories/Pulseras";
 import Llaveros from "./pages/categories/Llaveros";
 import Prendedores from "./pages/categories/Prendedores";
+import Garantia from "./pages/Garantia";
 
 const queryClient = new QueryClient();
 
