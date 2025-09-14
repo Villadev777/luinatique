@@ -39,7 +39,7 @@ const AboutSection = () => {
                 variant="outline"
                 className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground px-8 py-6 text-base font-medium tracking-wide transition-all duration-300"
               >
-                DISCOVER OUR STORY
+                DESCUBRE NUESTRA HISTORIA
               </Button>
             </div>
           </div>
