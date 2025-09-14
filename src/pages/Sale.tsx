@@ -55,9 +55,9 @@ const Sale = () => {
   }, []);
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('es-ES', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'PEN',
     }).format(price);
   };
 
@@ -72,7 +72,7 @@ const Sale = () => {
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading sale items...</p>
+            <p className="text-muted-foreground">Cargando productos en oferta...</p>
           </div>
         </div>
         <Footer />
@@ -152,7 +152,7 @@ const Sale = () => {
                           <div className="absolute top-3 right-3">
                             <Badge variant="secondary" className="flex items-center gap-1">
                               <Star className="h-3 w-3" />
-                              Featured
+                              Destacado
                             </Badge>
                           </div>
                         )}
@@ -160,7 +160,7 @@ const Sale = () => {
                       
                       <CardContent className="p-6">
                         <h3 className="font-playfair text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
-                          <a href={`/product/${product.slug}`}>
+                          <a href={`/product/${product.slug}?from=sale`}>
                             {product.name}
                           </a>
                         </h3>
