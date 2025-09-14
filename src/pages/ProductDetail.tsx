@@ -35,6 +35,8 @@ const ProductDetail = () => {
   const { toast } = useToast();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [productCategory, setProductCategory] = useState<string>('');
+  const [referrerPage, setReferrerPage] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>('');
@@ -44,6 +46,13 @@ const ProductDetail = () => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   useEffect(() => {
+    // Detectar la página de referencia
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromPage = urlParams.get('from');
+    if (fromPage) {
+      setReferrerPage(fromPage);
+    }
+
     const fetchProduct = async () => {
       if (!productSlug) {
         navigate('/shop');
@@ -53,7 +62,16 @@ const ProductDetail = () => {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select(`
+            *,
+            subcategory:subcategories(
+              slug,
+              category_section:category_sections(
+                slug,
+                main_category:main_categories(slug)
+              )
+            )
+          `)
           .eq('slug', productSlug)
           .eq('in_stock', true)
           .single();
@@ -70,6 +88,11 @@ const ProductDetail = () => {
         }
 
         setProduct(data);
+        
+        // Determinar la categoría del producto para navegación
+        if (data.subcategory?.category_section?.main_category?.slug) {
+          setProductCategory(data.subcategory.category_section.main_category.slug);
+        }
         
         // Set default selections
         if (data.sizes && data.sizes.length > 0) {
@@ -114,6 +137,21 @@ const ProductDetail = () => {
     return product.sale_price && product.sale_price < product.price;
   };
 
+  const handleBackToShop = () => {
+    // Prioridad 1: Si viene de SALE, ir a SALE
+    if (referrerPage === 'sale') {
+      navigate('/sale');
+    }
+    // Prioridad 2: Si tiene categoría, ir a la categoría específica
+    else if (productCategory) {
+      navigate(`/shop/${productCategory}`);
+    }
+    // Prioridad 3: Ir a la tienda general
+    else {
+      navigate('/shop');
+    }
+  };
+
   const handleAddToCart = async () => {
     if (!product) return;
 
@@ -145,21 +183,6 @@ const ProductDetail = () => {
     });
 
     setIsAddingToCart(false);
-  };
-
-  const handleBackToShop = () => {
-    // Prioridad 1: Si viene de SALE, ir a SALE
-    if (referrerPage === 'sale') {
-      navigate('/sale');
-    }
-    // Prioridad 2: Si tiene categoría, ir a la categoría específica
-    else if (productCategory) {
-      navigate(`/shop/${productCategory}`);
-    }
-    // Prioridad 3: Ir a la tienda general
-    else {
-      navigate('/shop');
-    }
   };
 
   const handleQuantityChange = (change: number) => {
