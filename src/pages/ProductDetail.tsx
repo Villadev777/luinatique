@@ -196,7 +196,7 @@ const ProductDetail = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/shop')}
+            onClick={handleBackToShop}
             className="p-0 h-auto hover:bg-transparent"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
