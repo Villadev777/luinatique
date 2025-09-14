@@ -29,7 +29,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'PEN',
     }).format(price);
   };
 
