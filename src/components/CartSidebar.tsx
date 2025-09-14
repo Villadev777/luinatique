@@ -75,7 +75,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
 
   const subtotal = state.totalPrice;
   const shipping = subtotal >= 50 ? 0 : 9.99;
-  const tax = (subtotal - discount) * 0.08; // 8% tax
+  const tax = (subtotal - discount) * 0.18; // 8% tax
   const finalTotal = subtotal - discount + shipping + tax;
   return (
     <Sheet>
