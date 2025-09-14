@@ -27,10 +27,10 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
   const [discount, setDiscount] = React.useState(0);
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-PE', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'PEN',
-    }).format(price);
+    }).format(price); 
   };
 
   const getItemPrice = (item: any) => {
