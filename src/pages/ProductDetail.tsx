@@ -7,10 +7,9 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Heart, Share2, ShoppingCart, Star, Truck, Shield, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Heart, Share2, ShoppingCart, Truck, Shield, RotateCcw } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -24,6 +23,7 @@ interface Product {
   featured: boolean;
   sizes: string[] | null;
   materials: string[] | null;
+  colors: string[] | null;
   slug: string;
   created_at: string;
 }
@@ -39,6 +39,7 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedMaterial, setSelectedMaterial] = useState<string>('');
+  const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
@@ -60,8 +61,8 @@ const ProductDetail = () => {
         if (error || !data) {
           console.error('Error fetching product:', error);
           toast({
-            title: "Product not found",
-            description: "The product you're looking for doesn't exist or is no longer available.",
+            title: "Producto no encontrado",
+            description: "El producto que buscas no existe o ya no está disponible.",
             variant: "destructive",
           });
           navigate('/shop');
@@ -77,11 +78,14 @@ const ProductDetail = () => {
         if (data.materials && data.materials.length > 0) {
           setSelectedMaterial(data.materials[0]);
         }
+        if (data.colors && data.colors.length > 0) {
+          setSelectedColor(data.colors[0]);
+        }
       } catch (error) {
         console.error('Error fetching product:', error);
         toast({
           title: "Error",
-          description: "Failed to load product details.",
+          description: "No se pudieron cargar los detalles del producto.",
           variant: "destructive",
         });
         navigate('/shop');
@@ -94,7 +98,7 @@ const ProductDetail = () => {
   }, [productSlug, navigate, toast]);
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('es-ES', {
       style: 'currency',
       currency: 'PEN',
     }).format(price);
@@ -116,7 +120,7 @@ const ProductDetail = () => {
     setIsAddingToCart(true);
 
     // Create unique cart item key based on selections
-    const cartItemKey = `${product.id}-${selectedSize}-${selectedMaterial}`;
+    const cartItemKey = `${product.id}-${selectedSize}-${selectedMaterial}-${selectedColor}`;
     
     const cartItem = {
       id: cartItemKey,
@@ -127,6 +131,7 @@ const ProductDetail = () => {
       slug: product.slug,
       selectedSize: selectedSize || undefined,
       selectedMaterial: selectedMaterial || undefined,
+      selectedColor: selectedColor || undefined,
     };
 
     // Add multiple quantities if needed
@@ -135,8 +140,8 @@ const ProductDetail = () => {
     }
 
     toast({
-      title: "Added to cart",
-      description: `${quantity} x ${product.name} added to your cart.`,
+      title: "Agregado al carrito",
+      description: `${quantity} x ${product.name} agregado a tu carrito.`,
     });
 
     setIsAddingToCart(false);
@@ -156,7 +161,7 @@ const ProductDetail = () => {
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading product details...</p>
+            <p className="text-muted-foreground">Cargando detalles del producto...</p>
           </div>
         </div>
         <Footer />
@@ -170,10 +175,10 @@ const ProductDetail = () => {
         <Header />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <h2 className="text-2xl font-semibold mb-4">Product not found</h2>
-            <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist.</p>
+            <h2 className="text-2xl font-semibold mb-4">Producto no encontrado</h2>
+            <p className="text-muted-foreground mb-6">El producto que buscas no existe.</p>
             <Button onClick={() => navigate('/shop')}>
-              Return to Shop
+              Volver a la Tienda
             </Button>
           </div>
         </div>
@@ -195,7 +200,7 @@ const ProductDetail = () => {
             className="p-0 h-auto hover:bg-transparent"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Shop
+            Volver a la Tienda
           </Button>
         </div>
 
@@ -263,7 +268,7 @@ const ProductDetail = () => {
                       {formatPrice(product.price)}
                     </span>
                     <Badge className="bg-destructive text-destructive-foreground">
-                      Save {Math.round(((product.price - product.sale_price!) / product.price) * 100)}%
+                      Ahorra {Math.round(((product.price - product.sale_price!) / product.price) * 100)}%
                     </Badge>
                   </>
                 ) : (
@@ -277,21 +282,21 @@ const ProductDetail = () => {
               <div className="flex items-center gap-2 mb-4">
                 {product.stock_quantity > 10 ? (
                   <Badge variant="outline" className="text-green-600 border-green-600">
-                    In Stock
+                    En Stock
                   </Badge>
                 ) : product.stock_quantity > 0 ? (
                   <Badge variant="outline" className="text-orange-600 border-orange-600">
-                    Only {product.stock_quantity} left
+                    Solo quedan {product.stock_quantity}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-red-600 border-red-600">
-                    Out of Stock
+                    Agotado
                   </Badge>
                 )}
                 
                 {product.featured && (
                   <Badge className="bg-primary text-primary-foreground">
-                    Featured
+                    Destacado
                   </Badge>
                 )}
               </div>
@@ -302,7 +307,7 @@ const ProductDetail = () => {
             {/* Product Description */}
             {product.description && (
               <div>
-                <h3 className="font-semibold mb-2">Description</h3>
+                <h3 className="font-semibold mb-2">Descripción</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   {product.description}
                 </p>
@@ -312,10 +317,10 @@ const ProductDetail = () => {
             {/* Size Selection */}
             {product.sizes && product.sizes.length > 0 && (
               <div>
-                <h3 className="font-semibold mb-3">Size</h3>
+                <h3 className="font-semibold mb-3">Talla</h3>
                 <Select value={selectedSize} onValueChange={setSelectedSize}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a size" />
+                    <SelectValue placeholder="Selecciona una talla" />
                   </SelectTrigger>
                   <SelectContent>
                     {product.sizes.map((size) => (
@@ -334,7 +339,7 @@ const ProductDetail = () => {
                 <h3 className="font-semibold mb-3">Material</h3>
                 <Select value={selectedMaterial} onValueChange={setSelectedMaterial}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a material" />
+                    <SelectValue placeholder="Selecciona un material" />
                   </SelectTrigger>
                   <SelectContent>
                     {product.materials.map((material) => (
@@ -347,9 +352,28 @@ const ProductDetail = () => {
               </div>
             )}
 
+            {/* Color Selection */}
+            {product.colors && product.colors.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-3">Color</h3>
+                <Select value={selectedColor} onValueChange={setSelectedColor}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecciona un color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {product.colors.map((color) => (
+                      <SelectItem key={color} value={color}>
+                        {color}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Quantity Selection */}
             <div>
-              <h3 className="font-semibold mb-3">Quantity</h3>
+              <h3 className="font-semibold mb-3">Cantidad</h3>
               <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
@@ -382,19 +406,19 @@ const ProductDetail = () => {
                 {isAddingToCart ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                    Adding to Cart...
+                    Agregando al Carrito...
                   </>
                 ) : (
                   <>
                     <ShoppingCart className="h-4 w-4 mr-2" />
-                    {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+                    {product.in_stock ? 'Agregar al Carrito' : 'Agotado'}
                   </>
                 )}
               </Button>
 
               {isInCart(product.id) && (
                 <p className="text-sm text-center text-muted-foreground">
-                  {getItemQuantity(product.id)} item(s) already in cart
+                  {getItemQuantity(product.id)} artículo(s) ya en el carrito
                 </p>
               )}
             </div>
@@ -405,52 +429,17 @@ const ProductDetail = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-3 text-sm">
                 <Truck className="h-5 w-5 text-muted-foreground" />
-                <span>Free shipping on orders over $50</span>
+                <span>Envío gratis en pedidos mayores a S/ 150</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Shield className="h-5 w-5 text-muted-foreground" />
-                <span>1-year warranty included</span>
+                <span>Garantía de por vida incluida</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <RotateCcw className="h-5 w-5 text-muted-foreground" />
-                <span>30-day return policy</span>
+                <span>Política de cambios de 7 días</span>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Additional Information */}
-        <div className="mt-16">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-3">Care Instructions</h3>
-                <p className="text-sm text-muted-foreground">
-                  Keep your jewelry looking beautiful with proper care. Store in a dry place, 
-                  avoid contact with chemicals, and clean gently with a soft cloth.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-3">Shipping & Returns</h3>
-                <p className="text-sm text-muted-foreground">
-                  Free shipping on orders over $50. Easy returns within 30 days. 
-                  All items are carefully packaged to ensure safe delivery.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-3">Authenticity</h3>
-                <p className="text-sm text-muted-foreground">
-                  Each piece is handcrafted with authentic materials and comes with 
-                  a certificate of authenticity. Quality guaranteed.
-                </p>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>
