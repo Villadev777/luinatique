@@ -68,7 +68,9 @@ const Aretes = () => {
             .from('subcategories')
             .select('id')
             .eq('slug', subcategory)
-            .limit(1).single()
+            .eq('category_section.main_category.slug', 'tienda')
+            .eq('category_section.slug', 'aretes')
+            .single();
 
           if (subcategoryError || !subcategoryData) {
             console.error('Subcategory not found:', subcategoryError);
