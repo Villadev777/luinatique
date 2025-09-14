@@ -263,7 +263,8 @@ export const ProductForm = ({ product, onClose }: ProductFormProps) => {
         sizes: sizes.length > 0 ? sizes : null,
         materials: materials.length > 0 ? materials : null,
         colors: colors.length > 0 ? colors : null, // ← Agregado
-        category_id: selectedCategoryId ? String(selectedCategoryId) : null,
+        // Lógica corregida: usar subcategory_id si existe, sino category_id
+        category_id: selectedSubcategoryId ? null : (selectedCategoryId ? String(selectedCategoryId) : null),
         subcategory_id: selectedSubcategoryId ? String(selectedSubcategoryId) : null,
       };
 
