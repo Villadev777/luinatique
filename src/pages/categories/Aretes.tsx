@@ -58,7 +58,7 @@ const Aretes = () => {
         
         if (subcategory) {
           // Fetch products for specific subcategory
-          const currentSubcategory = subcategories[subcategory as keyof typeof subcategories];
+          const currentSubcategory = subcategories[subcategory as keyof typeof subcategories]; 
           if (currentSubcategory) {
             setCategoryInfo(currentSubcategory);
           }
@@ -68,8 +68,6 @@ const Aretes = () => {
             .from('subcategories')
             .select('id')
             .eq('slug', subcategory)
-            .eq('category_section.main_category.slug', 'tienda')
-            .eq('category_section.slug', 'aretes')
             .single();
 
           if (subcategoryError || !subcategoryData) {
