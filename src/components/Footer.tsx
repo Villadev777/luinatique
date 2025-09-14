@@ -28,7 +28,7 @@ const Footer = () => {
       links: [
         { name: "Contáctanos", href: "/contactanos" },
         { name: "Guía de Tallas", href: "#size-guide" },
-        { name: "Garantía y Cuidado", href: "#garantia" },
+        { name: "Garantía y Cuidado", href: "/Garantia" },
         { name: "Política de devoluciones", href: "#envios" },
         { name: "Política de privacidad", href: "#privacidad" },
         { name: "Preguntas Frecuentes", href: "#faq" }
