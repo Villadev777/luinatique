@@ -27,6 +27,7 @@ import Collares from "./pages/categories/Collares";
 import Pulseras from "./pages/categories/Pulseras";
 import Llaveros from "./pages/categories/Llaveros";
 import Prendedores from "./pages/categories/Prendedores";
+import Envios from "./pages/Envios";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/contactanos" element={<Contact />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/garantia" element={<Garantia />} /> {/* ← Agregar esta línea */}
+              <Route path="/envios" element={<Envios />} />
               
               {/* User Account Pages */}
               <Route path="/profile" element={<ProfilePage />} />
