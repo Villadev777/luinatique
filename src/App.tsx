@@ -28,6 +28,7 @@ import Pulseras from "./pages/categories/Pulseras";
 import Llaveros from "./pages/categories/Llaveros";
 import Prendedores from "./pages/categories/Prendedores";
 import Envios from "./pages/Envios";
+import Privacidad from "./pages/Privacidad";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/admin" element={<Admin />} />
               <Route path="/garantia" element={<Garantia />} /> {/* ← Agregar esta línea */}
               <Route path="/envios" element={<Envios />} />
+              <Route path="/privacidad" element={<Privacidad />} />
               
               {/* User Account Pages */}
               <Route path="/profile" element={<ProfilePage />} />
