@@ -63,20 +63,12 @@ const Aretes = () => {
             setCategoryInfo(currentSubcategory);
           }
 
-          // En Aretes.tsx, reemplaza la consulta problemática:
-const { data: subcategoryData, error: subcategoryError } = await supabase
-  .from('subcategories')
-  .select(`
-    id,
-    category_section:category_sections(
-      slug,
-      main_category:main_categories(slug)
-    )
-  `)
-  .eq('slug', subcategory)
-  .eq('category_section.main_category.slug', 'tienda')
-  .eq('category_section.slug', 'aretes')
-  .single();
+          // Get subcategory ID first
+          const { data: subcategoryData, error: subcategoryError } = await supabase
+            .from('subcategories')
+            .select('id')
+            .eq('slug', subcategory)
+            .limit(1).single()
 
           if (subcategoryError || !subcategoryData) {
             console.error('Subcategory not found:', subcategoryError);
