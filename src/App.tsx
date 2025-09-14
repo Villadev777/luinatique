@@ -20,13 +20,13 @@ import ProfilePage from "./pages/ProfilePage";
 import FavoritesPage from "./pages/FavoritesPage";
 import OrdersPage from "./pages/OrdersPage";
 import SettingsPage from "./pages/SettingsPage";
+import Garantia from "./pages/Garantia"; // ← Agregar esta línea
 import Anillos from "./pages/categories/Anillos";
 import Aretes from "./pages/categories/Aretes";
 import Collares from "./pages/categories/Collares";
 import Pulseras from "./pages/categories/Pulseras";
 import Llaveros from "./pages/categories/Llaveros";
 import Prendedores from "./pages/categories/Prendedores";
-import Garantia from "./pages/Garantia";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +51,7 @@ const App = () => (
               <Route path="/lunatique" element={<Lunatique />} />
               <Route path="/contactanos" element={<Contact />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/garantia" element={<Garantia />} /> {/* ← Agregar esta línea */}
               
               {/* User Account Pages */}
               <Route path="/profile" element={<ProfilePage />} />
