@@ -147,6 +147,21 @@ const ProductDetail = () => {
     setIsAddingToCart(false);
   };
 
+  const handleBackToShop = () => {
+    // Prioridad 1: Si viene de SALE, ir a SALE
+    if (referrerPage === 'sale') {
+      navigate('/sale');
+    }
+    // Prioridad 2: Si tiene categoría, ir a la categoría específica
+    else if (productCategory) {
+      navigate(`/shop/${productCategory}`);
+    }
+    // Prioridad 3: Ir a la tienda general
+    else {
+      navigate('/shop');
+    }
+  };
+
   const handleQuantityChange = (change: number) => {
     const newQuantity = quantity + change;
     if (newQuantity >= 1 && newQuantity <= (product?.stock_quantity || 1)) {
