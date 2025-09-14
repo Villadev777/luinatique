@@ -26,12 +26,13 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ children }) => {
   const [appliedPromo, setAppliedPromo] = React.useState<string | null>(null);
   const [discount, setDiscount] = React.useState(0);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'PEN',
-    }).format(price); 
-  };
+const formatPrice = (price: number) => {
+  const formatted = new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(price);
+  return `S/ ${formatted}`;
+};
 
   const getItemPrice = (item: any) => {
     return item.sale_price || item.price;
