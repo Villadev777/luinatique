@@ -26,7 +26,7 @@ const Footer = () => {
     {
       title: "Atención al Cliente",
       links: [
-        { name: "Contáctanos", href: "/Contact" },
+        { name: "Contáctanos", href: "/contactanos" },
         { name: "Guía de Tallas", href: "#size-guide" },
         { name: "Instrucciones de Cuidado", href: "#care" },
         { name: "Envíos y Devoluciones", href: "#shipping" },
