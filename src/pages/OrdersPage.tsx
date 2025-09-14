@@ -96,12 +96,11 @@ const OrdersPage = () => {
   };
 
   const formatPrice = (price: number) => {
-  const formatted = new Intl.NumberFormat('es-ES', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
-  return `S/ ${formatted}`;
-};
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'PEN',
+    }).format(price);
+  }; 
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
