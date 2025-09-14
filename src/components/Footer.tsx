@@ -36,8 +36,8 @@ const Footer = () => {
   ];
 
   const socialLinks = [
-    { icon: Instagram, href: "#instagram", label: "Instagram" },
-    { icon: Facebook, href: "#facebook", label: "Facebook" },
+    { icon: Instagram, href: "https://www.instagram.com/lunatiqueshop/?hl=es-la", label: "Instagram" },
+    { icon: Facebook, href: "#https://www.facebook.com/lunatiqueshopperu/?locale=es_LA", label: "Facebook" },
     { icon: Image, href: "#pinterest", label: "Pinterest" },
     { icon: Mail, href: "#email", label: "Correo" }
   ];
