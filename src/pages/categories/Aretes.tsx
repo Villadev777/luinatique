@@ -51,6 +51,13 @@ const Aretes = () => {
     }
   };
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'PEN',
+    }).format(price);
+  };
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -63,11 +70,19 @@ const Aretes = () => {
             setCategoryInfo(currentSubcategory);
           }
 
-          // Get subcategory ID first
+          // Get subcategory ID first - CONSULTA CORREGIDA
           const { data: subcategoryData, error: subcategoryError } = await supabase
             .from('subcategories')
-            .select('id')
+            .select(`
+              id,
+              category_section:category_sections(
+                slug,
+                main_category:main_categories(slug)
+              )
+            `)
             .eq('slug', subcategory)
+            .eq('category_section.slug', 'aretes')
+            .eq('category_section.main_category.slug', 'tienda')
             .single();
 
           if (subcategoryError || !subcategoryData) {
@@ -151,13 +166,6 @@ const Aretes = () => {
 
     fetchProducts();
   }, [subcategory]);
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(price);
-  };
 
   const getDiscountPercentage = (originalPrice: number, salePrice: number) => {
     return Math.round(((originalPrice - salePrice) / originalPrice) * 100);
@@ -250,7 +258,7 @@ const Aretes = () => {
                           <div className="absolute top-3 right-3">
                             <Badge variant="secondary" className="flex items-center gap-1">
                               <Star className="h-3 w-3" />
-                              Featured
+                              Destacado
                             </Badge>
                           </div>
                         )}
@@ -258,7 +266,7 @@ const Aretes = () => {
                       
                       <CardContent className="p-6">
                         <h3 className="font-playfair text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
-                          <a href={`/product/${product.slug}`}>
+                          <a href={`/product/${product.slug}?from=aretes`}>
                             {product.name}
                           </a>
                         </h3>
