@@ -85,52 +85,52 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
   };
 
   return (
-    <div className=\"max-w-4xl mx-auto p-6 space-y-6\">
-      <div className=\"grid md:grid-cols-2 gap-6\">
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="grid md:grid-cols-2 gap-6">
         {/* Formulario de Checkout */}
         <Card>
           <CardHeader>
-            <CardTitle className=\"flex items-center gap-2\">
-              <CreditCard className=\"h-5 w-5\" />
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
               Información de Pago
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className=\"space-y-4\">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Datos del Cliente */}
-              <div className=\"space-y-4\">
-                <h3 className=\"font-semibold text-lg\">Datos del Cliente</h3>
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Datos del Cliente</h3>
                 
                 <div>
-                  <Label htmlFor=\"email\">Email *</Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input
-                    id=\"email\"
-                    type=\"email\"
+                    id="email"
+                    type="email"
                     value={customerData.email}
                     onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                    placeholder=\"tu@email.com\"
+                    placeholder="tu@email.com"
                     required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor=\"name\">Nombre Completo *</Label>
+                  <Label htmlFor="name">Nombre Completo *</Label>
                   <Input
-                    id=\"name\"
+                    id="name"
                     value={customerData.name}
                     onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
-                    placeholder=\"Juan Pérez\"
+                    placeholder="Juan Pérez"
                     required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor=\"phone\">Teléfono</Label>
+                  <Label htmlFor="phone">Teléfono</Label>
                   <Input
-                    id=\"phone\"
+                    id="phone"
                     value={customerData.phone}
                     onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
-                    placeholder=\"+51 999 999 999\"
+                    placeholder="+51 999 999 999"
                   />
                 </div>
               </div>
@@ -138,58 +138,58 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
               <Separator />
 
               {/* Dirección de Envío */}
-              <div className=\"space-y-4\">
-                <h3 className=\"font-semibold text-lg\">Dirección de Envío (Opcional)</h3>
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Dirección de Envío (Opcional)</h3>
                 
-                <div className=\"grid grid-cols-2 gap-4\">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor=\"street\">Calle</Label>
+                    <Label htmlFor="street">Calle</Label>
                     <Input
-                      id=\"street\"
+                      id="street"
                       value={shippingData.street}
                       onChange={(e) => setShippingData({ ...shippingData, street: e.target.value })}
-                      placeholder=\"Av. Javier Prado\"
+                      placeholder="Av. Javier Prado"
                     />
                   </div>
                   <div>
-                    <Label htmlFor=\"number\">Número</Label>
+                    <Label htmlFor="number">Número</Label>
                     <Input
-                      id=\"number\"
+                      id="number"
                       value={shippingData.number}
                       onChange={(e) => setShippingData({ ...shippingData, number: e.target.value })}
-                      placeholder=\"123\"
+                      placeholder="123"
                     />
                   </div>
                 </div>
 
-                <div className=\"grid grid-cols-2 gap-4\">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor=\"city\">Ciudad</Label>
+                    <Label htmlFor="city">Ciudad</Label>
                     <Input
-                      id=\"city\"
+                      id="city"
                       value={shippingData.city}
                       onChange={(e) => setShippingData({ ...shippingData, city: e.target.value })}
-                      placeholder=\"Lima\"
+                      placeholder="Lima"
                     />
                   </div>
                   <div>
-                    <Label htmlFor=\"zipCode\">Código Postal</Label>
+                    <Label htmlFor="zipCode">Código Postal</Label>
                     <Input
-                      id=\"zipCode\"
+                      id="zipCode"
                       value={shippingData.zipCode}
                       onChange={(e) => setShippingData({ ...shippingData, zipCode: e.target.value })}
-                      placeholder=\"15001\"
+                      placeholder="15001"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor=\"state\">Departamento</Label>
+                  <Label htmlFor="state">Departamento</Label>
                   <Input
-                    id=\"state\"
+                    id="state"
                     value={shippingData.state}
                     onChange={(e) => setShippingData({ ...shippingData, state: e.target.value })}
-                    placeholder=\"Lima\"
+                    placeholder="Lima"
                   />
                 </div>
               </div>
@@ -197,26 +197,26 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
               <Separator />
 
               <Button
-                type=\"submit\"
-                className=\"w-full\"
+                type="submit"
+                className="w-full"
                 disabled={loading}
-                size=\"lg\"
+                size="lg"
               >
                 {loading ? (
                   <>
-                    <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Procesando...
                   </>
                 ) : (
                   <>
-                    <Shield className=\"mr-2 h-4 w-4\" />
+                    <Shield className="mr-2 h-4 w-4" />
                     Pagar con MercadoPago
                   </>
                 )}
               </Button>
 
-              <div className=\"text-xs text-muted-foreground text-center\">
-                Al hacer clic en \"Pagar\", serás redirigido a MercadoPago para completar tu pago de forma segura.
+              <div className="text-xs text-muted-foreground text-center">
+                Al hacer clic en "Pagar", serás redirigido a MercadoPago para completar tu pago de forma segura.
               </div>
             </form>
           </CardContent>
@@ -227,16 +227,16 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
           <CardHeader>
             <CardTitle>Resumen del Pedido</CardTitle>
           </CardHeader>
-          <CardContent className=\"space-y-4\">
+          <CardContent className="space-y-4">
             {items.map((item) => (
-              <div key={item.id} className=\"flex justify-between items-center\">
-                <div className=\"flex-1\">
-                  <p className=\"font-medium\">{item.title}</p>
-                  <p className=\"text-sm text-muted-foreground\">
+              <div key={item.id} className="flex justify-between items-center">
+                <div className="flex-1">
+                  <p className="font-medium">{item.title}</p>
+                  <p className="text-sm text-muted-foreground">
                     Cantidad: {item.quantity}
                   </p>
                 </div>
-                <p className=\"font-medium\">
+                <p className="font-medium">
                   {mercadoPagoService.formatPrice(item.price * item.quantity)}
                 </p>
               </div>
@@ -244,14 +244,14 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
             
             <Separator />
             
-            <div className=\"flex justify-between items-center text-lg font-bold\">
+            <div className="flex justify-between items-center text-lg font-bold">
               <span>Total</span>
               <span>{mercadoPagoService.formatPrice(total)}</span>
             </div>
 
-            <div className=\"bg-muted p-4 rounded-lg\">
-              <h4 className=\"font-semibold mb-2\">Métodos de Pago Disponibles</h4>
-              <div className=\"text-sm text-muted-foreground space-y-1\">
+            <div className="bg-muted p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Métodos de Pago Disponibles</h4>
+              <div className="text-sm text-muted-foreground space-y-1">
                 <p>• Tarjetas de crédito y débito</p>
                 <p>• Transferencia bancaria</p>
                 <p>• PagoEfectivo</p>
@@ -259,8 +259,8 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
               </div>
             </div>
 
-            <div className=\"flex items-center justify-center space-x-2 text-sm text-muted-foreground\">
-              <Shield className=\"h-4 w-4\" />
+            <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
+              <Shield className="h-4 w-4" />
               <span>Pago 100% seguro con MercadoPago</span>
             </div>
           </CardContent>
