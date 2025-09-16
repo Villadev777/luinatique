@@ -33,15 +33,15 @@ const Anillos = () => {
   const [categoryInfo, setCategoryInfo] = useState<{title: string; description: string} | null>(null);
 
   const subcategories = {
-    'miyuki': {
-      title: 'Anillos Miyuki',
-      description: 'Anillos delicados inspirados en la técnica japonesa Miyuki, con cuentas diminutas y diseños únicos.',
-    },
-    'alambrismo-anillos': {
-      title: 'Anillos de Alambrismo',
-      description: 'Anillos artesanales creados con técnicas de alambrismo, cada pieza es única y hecha a mano.',
-    }
-  };
+  'miyuki-anillos': {
+    title: 'Anillos Miyuki',
+    description: 'Anillos delicados inspirados en la técnica japonesa Miyuki...',
+  },
+  'alambrismo-anillos': {
+    title: 'Anillos de Alambrismo',
+    description: 'Anillos artesanales creados con técnicas de alambrismo...',
+  }
+};
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-ES', {
