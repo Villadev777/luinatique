@@ -6,9 +6,22 @@ import {
   CartItem 
 } from '../types/mercadopago';
 
-// Get Supabase URL from environment or use default
+// Get Supabase URL from environment - NUNCA usar localhost en producción
 const getSupabaseUrl = () => {
-  return import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321';
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  
+  if (!url) {
+    console.error('VITE_SUPABASE_URL not found in environment variables');
+    throw new Error('Supabase URL not configured');
+  }
+  
+  // Asegurar que nunca usemos localhost en producción
+  if (url.includes('localhost') && window.location.hostname !== 'localhost') {
+    console.error('Localhost URL detected in production environment');
+    throw new Error('Invalid Supabase URL configuration for production');
+  }
+  
+  return url;
 };
 
 const MERCADOPAGO_API_URL = `${getSupabaseUrl()}/functions/v1`;
@@ -32,6 +45,11 @@ export class MercadoPagoService {
       
       console.log('Creating preference with data:', preferenceData);
       console.log('API URL:', `${MERCADOPAGO_API_URL}/mercadopago-create-preference`);
+      console.log('Environment check:', {
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+        hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+        currentHost: window.location.hostname
+      });
       
       const response = await fetch(`${MERCADOPAGO_API_URL}/mercadopago-create-preference`, {
         method: 'POST',
