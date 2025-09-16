@@ -1,10 +1,18 @@
-import React from 'react';
-import { CartSidebar } from '../components/CartSidebar';
+import React, { useEffect } from 'react';
 import { useCart } from '../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 
 const CartPage: React.FC = () => {
-  const { addItem } = useCart();
+  const { addItem, openCart } = useCart();
+  const navigate = useNavigate();
+
+  // Abrir el carrito automáticamente cuando se carga la página
+  useEffect(() => {
+    openCart();
+  }, [openCart]);
 
   // Función para agregar un producto de ejemplo
   const addSampleProduct = () => {
@@ -20,31 +28,48 @@ const CartPage: React.FC = () => {
     });
   };
 
+  const goToShop = () => {
+    navigate('/shop');
+  };
+
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="container mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Contenido principal */}
-          <div className="lg:col-span-2">
-            <h1 className="text-3xl font-bold mb-6">Mi Carrito</h1>
+    <div className="min-h-screen bg-background">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-3xl font-bold mb-6">Tu Carrito</h1>
+          
+          <div className="space-y-6">
+            <p className="text-muted-foreground">
+              El carrito se muestra en el panel lateral derecho. 
+              Haz clic en el ícono del carrito en el header para abrirlo.
+            </p>
             
-            <div className="space-y-4">
-              <p className="text-muted-foreground">
-                Esta es una página de ejemplo para probar el carrito de compras.
-              </p>
-              
-              <Button onClick={addSampleProduct}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button onClick={addSampleProduct} size="lg">
                 Agregar Producto de Ejemplo
               </Button>
+              
+              <Button variant="outline" onClick={goToShop} size="lg">
+                Ir a la Tienda
+              </Button>
             </div>
-          </div>
 
-          {/* Sidebar del carrito */}
-          <div className="lg:col-span-1">
-            <CartSidebar />
+            <div className="mt-8 p-6 border rounded-lg bg-muted/50">
+              <h2 className="text-lg font-semibold mb-2">¿Cómo usar el carrito?</h2>
+              <ul className="text-sm text-muted-foreground space-y-2">
+                <li>• Haz clic en el ícono del carrito 🛒 en el header</li>
+                <li>• Agrega productos desde cualquier página de producto</li>
+                <li>• El carrito se abre automáticamente al agregar productos</li>
+                <li>• Haz clic en "Proceder al Pago" para completar tu compra</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };
