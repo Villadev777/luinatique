@@ -268,10 +268,29 @@ export class MercadoPagoService {
 
   /**
    * Redirige al checkout de MercadoPago
+   * SIEMPRE usa sandbox para pruebas automáticamente
    */
-  redirectToCheckout(preference: PreferenceResponse, useSandbox: boolean = true): void {
+  redirectToCheckout(preference: PreferenceResponse, useSandbox?: boolean): void {
+    // Si no se especifica, detecta automáticamente si es TEST
+    if (useSandbox === undefined) {
+      // Detecta si estamos en modo TEST basándose en si hay sandbox_init_point
+      useSandbox = !!preference.sandbox_init_point;
+    }
+    
     const checkoutUrl = useSandbox ? preference.sandbox_init_point : preference.init_point;
-    console.log('Redirecting to checkout:', checkoutUrl);
+    
+    console.log('Redirecting to checkout:', {
+      useSandbox,
+      checkoutUrl,
+      hasProductionUrl: !!preference.init_point,
+      hasSandboxUrl: !!preference.sandbox_init_point
+    });
+    
+    if (!checkoutUrl) {
+      console.error('No checkout URL available for the selected mode');
+      throw new Error('URL de checkout no disponible');
+    }
+    
     window.location.href = checkoutUrl;
   }
 
