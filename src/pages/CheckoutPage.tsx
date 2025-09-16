@@ -1,46 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckoutComponent } from '../components/CheckoutComponent';
-import { CartItem } from '../types/mercadopago';
+import { CartItem as MercadoPagoCartItem } from '../types/mercadopago';
+import { useCart } from '../context/CartContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { ArrowLeft, ShoppingCart } from 'lucide-react';
 
-// Mock cart hook - reemplaza esto con tu hook real de carrito
-const useCart = () => {
-  const [items, setItems] = useState<CartItem[]>([
-    {
-      id: '1',
-      title: 'Producto de ejemplo',
-      price: 99.99,
-      quantity: 1,
-      description: 'Descripción del producto',
-      image: '/placeholder-image.jpg'
-    }
-  ]);
-
-  return {
-    items,
-    clearCart: () => setItems([]),
-    removeItem: (id: string) => setItems(items.filter(item => item.id !== id)),
-  };
-};
-
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const { items, clearCart } = useCart();
+  const { state: cartState, clearCart } = useCart();
 
   useEffect(() => {
     // Si no hay items en el carrito, redirigir a la tienda
-    if (items.length === 0) {
+    if (cartState.items.length === 0) {
       navigate('/shop');
     }
-  }, [items, navigate]);
+  }, [cartState.items, navigate]);
+
+  // Convertir items del carrito al formato de MercadoPago
+  const convertCartItems = (): MercadoPagoCartItem[] => {
+    return cartState.items.map(item => ({
+      id: item.id,
+      title: item.name,
+      price: item.sale_price || item.price,
+      quantity: item.quantity,
+      description: `${item.selectedSize ? `Talla: ${item.selectedSize}` : ''} ${item.selectedMaterial ? `Material: ${item.selectedMaterial}` : ''}`.trim() || undefined,
+      image: item.image,
+    }));
+  };
 
   const handlePaymentSuccess = (preferenceId: string) => {
     console.log('Payment initiated with preference:', preferenceId);
-    // Aquí puedes agregar lógica adicional como limpiar el carrito
-    // clearCart();
+    // Guardamos la referencia del pago para limpiar el carrito después del pago exitoso
+    sessionStorage.setItem('pending_payment_preference', preferenceId);
   };
 
   const handlePaymentError = (error: string) => {
@@ -48,7 +41,7 @@ export const CheckoutPage: React.FC = () => {
     // Aquí puedes agregar lógica para manejar errores
   };
 
-  if (items.length === 0) {
+  if (cartState.items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -66,6 +59,8 @@ export const CheckoutPage: React.FC = () => {
       </div>
     );
   }
+
+  const mercadoPagoItems = convertCartItems();
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,7 +81,7 @@ export const CheckoutPage: React.FC = () => {
               <h1 className="text-2xl font-bold">Checkout</h1>
             </div>
             <div className="text-sm text-muted-foreground">
-              {items.length} producto{items.length !== 1 ? 's' : ''} en el carrito
+              {cartState.items.length} producto{cartState.items.length !== 1 ? 's' : ''} en el carrito
             </div>
           </div>
         </div>
@@ -94,7 +89,7 @@ export const CheckoutPage: React.FC = () => {
 
       {/* Checkout Content */}
       <CheckoutComponent
-        items={items}
+        items={mercadoPagoItems}
         onSuccess={handlePaymentSuccess}
         onError={handlePaymentError}
       />
