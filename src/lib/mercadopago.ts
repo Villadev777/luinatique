@@ -6,7 +6,12 @@ import {
   CartItem 
 } from '../types/mercadopago';
 
-const MERCADOPAGO_API_URL = '/api/mercadopago'; // Tu endpoint de API
+// Get Supabase URL from environment or use default
+const getSupabaseUrl = () => {
+  return import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321';
+};
+
+const MERCADOPAGO_API_URL = `${getSupabaseUrl()}/functions/v1`;
 
 export class MercadoPagoService {
   private static instance: MercadoPagoService;
@@ -25,16 +30,18 @@ export class MercadoPagoService {
     try {
       const preferenceData: PreferenceRequest = this.buildPreferenceRequest(checkoutData);
       
-      const response = await fetch(`${MERCADOPAGO_API_URL}/create-preference`, {
+      const response = await fetch(`${MERCADOPAGO_API_URL}/mercadopago-create-preference`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify(preferenceData),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const preference: PreferenceResponse = await response.json();
@@ -50,15 +57,17 @@ export class MercadoPagoService {
    */
   async getPaymentStatus(paymentId: string): Promise<PaymentStatus> {
     try {
-      const response = await fetch(`${MERCADOPAGO_API_URL}/payment/${paymentId}`, {
+      const response = await fetch(`${MERCADOPAGO_API_URL}/mercadopago-get-payment/${paymentId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const payment: PaymentStatus = await response.json();
@@ -154,7 +163,7 @@ export class MercadoPagoService {
         pending: `${baseUrl}/payment/pending`,
       },
       auto_return: 'approved',
-      notification_url: `${baseUrl}/api/mercadopago/webhook`,
+      notification_url: `${getSupabaseUrl()}/functions/v1/mercadopago-webhook`,
       statement_descriptor: 'LUINATIQUE',
       external_reference: this.generateExternalReference(),
       expires: true,
