@@ -1,18 +1,17 @@
 import { useState } from "react";
 import { useCategories } from "@/hooks/useCategories";
 import { MegaMenu } from "@/components/Navigation/MegaMenu";
-import { Search, ShoppingBag, Menu, X } from "lucide-react";
+import { Search, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserProfile } from "@/components/UserProfile";
-import { CartSidebar } from "@/components/CartSidebar";
-import { useCart } from "@/context/CartContext";
+import { CartButton } from "@/components/CartButton";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { navigationStructure, loading } = useCategories();
-  const { state } = useCart();
+
   return (
     <header className="relative bg-background border-b border-border">
       {/* Announcement Bar */}
@@ -76,19 +75,7 @@ const Header = () => {
             <div className="hidden md:flex">
               <UserProfile />
             </div>
-            <CartSidebar>
-              <Button variant="ghost" size="sm" className="relative">
-                <ShoppingBag className="h-4 w-4" />
-                {state.totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium animate-pulse">
-                    {state.totalItems}
-                  </span>
-                )}
-                <span className="sr-only">
-                  Shopping cart with {state.totalItems} items
-                </span>
-              </Button>
-            </CartSidebar>
+            <CartButton />
           </div>
         </div>
 
