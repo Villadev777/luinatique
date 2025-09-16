@@ -33,15 +33,15 @@ const Prendedores = () => {
   const [categoryInfo, setCategoryInfo] = useState<{title: string; description: string} | null>(null);
 
   const subcategories = {
-    'miyuki': {
-      title: 'Prendedores Miyuki',
-      description: 'Prendedores con cuentas Miyuki que añaden un toque de color y elegancia a cualquier prenda.',
-    },
-    'bordados': {
-      title: 'Prendedores Bordados',
-      description: 'Prendedores con bordados artesanales que celebran técnicas tradicionales.',
-    }
-  };
+  'miyuki-prendedores': {
+    title: 'Prendedores Miyuki',
+    description: 'Prendedores delicados con la técnica japonesa Miyuki...',
+  },
+  'bordados-prendedores': {
+    title: 'Prendedores Bordados',
+    description: 'Prendedores con bordados tradicionales...',
+  }
+};
 
   useEffect(() => {
     const fetchProducts = async () => {
