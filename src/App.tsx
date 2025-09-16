@@ -33,6 +33,7 @@ import Privacidad from "./pages/Privacidad";
 import CheckoutPage from "./pages/CheckoutPage";
 import PaymentResult from "./pages/PaymentResult";
 import CartPage from "./pages/CartPage";
+import TestPage from "./pages/TestPage";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,9 @@ const App = () => (
               <Route path="/payment/success" element={<PaymentResult />} />
               <Route path="/payment/failure" element={<PaymentResult />} />
               <Route path="/payment/pending" element={<PaymentResult />} />
+              
+              {/* Test Page for Development */}
+              <Route path="/test" element={<TestPage />} />
               
               {/* Category Pages */}
               <Route path="/shop/anillos" element={<Anillos />} />
