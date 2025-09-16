@@ -31,7 +31,17 @@ interface PaymentMethod {
   status: 'available' | 'unavailable' | 'recommended';
 }
 
-const PaymentMethodSelector: React.FC = () => {
+interface PaymentMethodSelectorProps {
+  checkoutData?: CheckoutData;
+  onSuccess?: (details: any) => void;
+  onError?: (error: string) => void;
+}
+
+const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
+  checkoutData: providedCheckoutData,
+  onSuccess,
+  onError
+}) => {
   const { state, clearCart } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -40,8 +50,8 @@ const PaymentMethodSelector: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paypalLoaded, setPaypalLoaded] = useState(false);
 
-  // Mock checkout data - in real app this would come from a form
-  const checkoutData: CheckoutData = {
+  // Use provided checkout data or create from cart
+  const checkoutData: CheckoutData = providedCheckoutData || {
     items: state.items.map(item => ({
       id: item.id,
       title: item.name,
@@ -73,7 +83,7 @@ const PaymentMethodSelector: React.FC = () => {
       icon: <CreditCard className="h-6 w-6" />,
       fees: 'Sin comisión adicional',
       processingTime: 'Inmediato',
-      status: 'unavailable', // Temporarily disabled due to configuration issues
+      status: 'available',
     },
     {
       id: 'paypal',
@@ -121,21 +131,31 @@ const PaymentMethodSelector: React.FC = () => {
               description: `Pago procesado correctamente. ID: ${details.id}`,
             });
             clearCart();
-            navigate('/payment/success', { 
-              state: { 
-                paymentDetails: details,
-                method: 'paypal' 
-              } 
-            });
+            
+            if (onSuccess) {
+              onSuccess(details);
+            } else {
+              navigate('/payment/success', { 
+                state: { 
+                  paymentDetails: details,
+                  method: 'paypal' 
+                } 
+              });
+            }
           },
           (error: any) => {
             console.error('PayPal payment error:', error);
+            const errorMessage = "Hubo un problema procesando tu pago con PayPal.";
             toast({
               title: "Error en el pago",
-              description: "Hubo un problema procesando tu pago con PayPal.",
+              description: errorMessage,
               variant: "destructive",
             });
             setIsProcessing(false);
+            
+            if (onError) {
+              onError(errorMessage);
+            }
           }
         );
 
@@ -146,20 +166,35 @@ const PaymentMethodSelector: React.FC = () => {
         }
       }
     }
-  }, [selectedMethod, paypalLoaded, isProcessing, checkoutData, toast, clearCart, navigate]);
+  }, [selectedMethod, paypalLoaded, isProcessing, checkoutData, toast, clearCart, navigate, onSuccess, onError]);
 
   const handleMercadoPagoPayment = async () => {
     setIsProcessing(true);
     try {
       const preference = await mercadoPagoService.createPreference(checkoutData);
-      mercadoPagoService.redirectToCheckout(preference);
+      
+      toast({
+        title: "Redirigiendo a MercadoPago",
+        description: "Serás redirigido para completar tu pago.",
+      });
+      
+      if (onSuccess) {
+        onSuccess({ preference_id: preference.id, method: 'mercadopago' });
+      } else {
+        mercadoPagoService.redirectToCheckout(preference);
+      }
     } catch (error) {
       console.error('MercadoPago error:', error);
+      const errorMessage = "Hubo un problema con MercadoPago. Por favor intenta con PayPal.";
       toast({
         title: "Error",
-        description: "Hubo un problema con MercadoPago. Por favor intenta con PayPal.",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      if (onError) {
+        onError(errorMessage);
+      }
       setIsProcessing(false);
     }
   };
@@ -186,7 +221,7 @@ const PaymentMethodSelector: React.FC = () => {
     }
   };
 
-  const totalPEN = state.totalPrice;
+  const totalPEN = checkoutData.items.reduce((total, item) => total + (item.price * item.quantity), 0);
   const totalUSD = paypalService.getTotalAmountUSD(checkoutData);
 
   return (
@@ -244,8 +279,7 @@ const PaymentMethodSelector: React.FC = () => {
 
                 {method.status === 'unavailable' && (
                   <div className="mt-3 p-2 bg-red-50 rounded text-sm text-red-700">
-                    MercadoPago está temporalmente no disponible mientras resolvemos 
-                    algunos problemas de configuración.
+                    {method.name} está temporalmente no disponible.
                   </div>
                 )}
               </CardContent>
@@ -260,17 +294,17 @@ const PaymentMethodSelector: React.FC = () => {
               <CardTitle>Resumen del pedido</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {state.items.map((item) => (
+              {checkoutData.items.map((item) => (
                 <div key={item.id} className="flex justify-between items-center">
                   <div className="flex-1">
-                    <h4 className="font-medium text-sm">{item.name}</h4>
+                    <h4 className="font-medium text-sm">{item.title}</h4>
                     <p className="text-sm text-muted-foreground">
                       Cantidad: {item.quantity}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      S/ {((item.sale_price || item.price) * item.quantity).toFixed(2)}
+                      S/ {(item.price * item.quantity).toFixed(2)}
                     </p>
                   </div>
                 </div>
