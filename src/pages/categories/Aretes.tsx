@@ -182,7 +182,7 @@ const Aretes = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/shop')}
+                onClick={() => navigate('/shop/aretes')}
                 className="p-0 h-auto hover:bg-transparent"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -332,7 +332,7 @@ const Aretes = () => {
               Explora otras categorías o contáctanos para crear un diseño personalizado.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" onClick={() => navigate('/shop')}>
+              <Button size="lg" onClick={() => navigate('/shop/aretes')}>
                 Ver Todas las Categorías
               </Button>
               <Button size="lg" variant="outline" onClick={() => navigate('/contactanos')}>
