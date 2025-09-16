@@ -1,10 +1,17 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+// Initialize Supabase client
+const supabaseClient = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
 
 // PayPal API configuration
 const getPayPalConfig = () => {
@@ -48,6 +55,56 @@ async function getPayPalAccessToken(): Promise<string> {
   
   const data = await response.json();
   return data.access_token;
+}
+
+// Update order status in database
+async function updateOrderInDatabase(paypalOrderId: string, captureDetails: any) {
+  try {
+    const { payer, purchase_units } = captureDetails;
+    const payerId = payer?.payer_id;
+    const captureId = purchase_units?.[0]?.payments?.captures?.[0]?.id;
+    
+    // First, try to find the order by PayPal order ID
+    const { data: order, error: fetchError } = await supabaseClient
+      .from('orders')
+      .select('*')
+      .eq('paypal_order_id', paypalOrderId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching order:', fetchError);
+      throw new Error(`Failed to find order: ${fetchError.message}`);
+    }
+
+    if (!order) {
+      throw new Error('Order not found in database');
+    }
+
+    // Update the order with capture details
+    const { data: updatedOrder, error: updateError } = await supabaseClient
+      .from('orders')
+      .update({
+        paypal_payer_id: payerId,
+        payment_id: captureId,
+        payment_status: 'completed',
+        status: 'completed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('paypal_order_id', paypalOrderId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Database update error:', updateError);
+      throw new Error(`Failed to update order: ${updateError.message}`);
+    }
+
+    console.log('✅ Order updated in database:', updatedOrder.id);
+    return updatedOrder;
+  } catch (error) {
+    console.error('❌ Error updating order in database:', error);
+    throw error;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -130,8 +187,20 @@ Deno.serve(async (req: Request) => {
       payer: result.payer?.email_address
     });
 
-    // Here you would typically save the payment details to your database
-    // and update order status, send confirmation emails, etc.
+    // Update order in database
+    try {
+      await updateOrderInDatabase(orderID, result);
+      console.log('✅ Order status updated in database');
+    } catch (dbError) {
+      console.error('⚠️ Failed to update order in database (PayPal capture still successful):', dbError);
+      // Don't fail the entire request if DB update fails
+    }
+
+    // Here you would typically:
+    // 1. Send confirmation email to customer
+    // 2. Update inventory
+    // 3. Trigger fulfillment process
+    // 4. Send notifications to admin
 
     return new Response(
       JSON.stringify(result),
