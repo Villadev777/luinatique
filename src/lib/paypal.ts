@@ -6,6 +6,18 @@ import {
 } from '../types/paypal';
 import { CartItem, CheckoutData } from '../types/mercadopago';
 
+// Get Supabase URL from environment
+const getSupabaseUrl = () => {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  
+  if (!url) {
+    console.error('VITE_SUPABASE_URL not found in environment variables');
+    throw new Error('Supabase URL not configured');
+  }
+  
+  return url;
+};
+
 // Get PayPal configuration from environment
 const getPayPalConfig = () => {
   const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
@@ -19,6 +31,7 @@ const getPayPalConfig = () => {
     clientId,
     isProduction,
     currency: 'USD', // PayPal works better with USD for international transactions
+    apiUrl: `${getSupabaseUrl()}/functions/v1`,
   };
 };
 
@@ -134,16 +147,19 @@ export class PayPalService {
       
       console.log('Creating PayPal order:', order);
 
-      const response = await fetch('/api/paypal/create-order', {
+      const response = await fetch(`${this.config.apiUrl}/paypal-create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify(order),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        console.error('PayPal create order error:', errorData);
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const data: PayPalOrderResponse = await response.json();
@@ -152,7 +168,7 @@ export class PayPalService {
       return data.id;
     } catch (error) {
       console.error('Error creating PayPal order:', error);
-      throw new Error('Failed to create PayPal order');
+      throw new Error('Failed to create PayPal order: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
 
@@ -163,15 +179,18 @@ export class PayPalService {
     try {
       console.log('Capturing PayPal order:', orderID);
 
-      const response = await fetch(`/api/paypal/capture-order/${orderID}`, {
+      const response = await fetch(`${this.config.apiUrl}/paypal-capture-order/${orderID}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        console.error('PayPal capture order error:', errorData);
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const data: PayPalCaptureResponse = await response.json();
@@ -180,7 +199,7 @@ export class PayPalService {
       return data;
     } catch (error) {
       console.error('Error capturing PayPal order:', error);
-      throw new Error('Failed to capture PayPal order');
+      throw new Error('Failed to capture PayPal order: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
 
