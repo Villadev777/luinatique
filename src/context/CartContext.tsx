@@ -16,6 +16,7 @@ interface CartState {
   items: CartItem[];
   totalItems: number;
   totalPrice: number;
+  isOpen: boolean; // Control del estado abierto/cerrado
 }
 
 type CartAction =
@@ -23,7 +24,10 @@ type CartAction =
   | { type: 'REMOVE_ITEM'; payload: string }
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
   | { type: 'CLEAR_CART' }
-  | { type: 'LOAD_CART'; payload: CartItem[] };
+  | { type: 'LOAD_CART'; payload: CartItem[] }
+  | { type: 'TOGGLE_CART' }
+  | { type: 'OPEN_CART' }
+  | { type: 'CLOSE_CART' };
 
 interface CartContextType {
   state: CartState;
@@ -41,6 +45,9 @@ interface CartContextType {
     totalItems: number;
     uniqueItems: number;
   };
+  toggleCart: () => void;
+  openCart: () => void;
+  closeCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -63,6 +70,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           items: updatedItems,
           totalItems: state.totalItems + 1,
           totalPrice: calculateTotalPrice(updatedItems),
+          isOpen: true, // Abrir carrito al agregar item
         };
       } else {
         const newItem = { ...action.payload, quantity: 1 };
@@ -73,6 +81,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           items: updatedItems,
           totalItems: state.totalItems + 1,
           totalPrice: calculateTotalPrice(updatedItems),
+          isOpen: true, // Abrir carrito al agregar item
         };
       }
     }
@@ -113,16 +122,36 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         items: [],
         totalItems: 0,
         totalPrice: 0,
+        isOpen: false,
       };
     
     case 'LOAD_CART': {
       const items = action.payload;
       return {
+        ...state,
         items,
         totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
         totalPrice: calculateTotalPrice(items),
       };
     }
+
+    case 'TOGGLE_CART':
+      return {
+        ...state,
+        isOpen: !state.isOpen,
+      };
+
+    case 'OPEN_CART':
+      return {
+        ...state,
+        isOpen: true,
+      };
+
+    case 'CLOSE_CART':
+      return {
+        ...state,
+        isOpen: false,
+      };
     
     default:
       return state;
@@ -143,6 +172,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     items: [],
     totalItems: 0,
     totalPrice: 0,
+    isOpen: false, // Por defecto cerrado
   });
 
   // Load cart from localStorage on mount
@@ -197,6 +227,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'CLEAR_CART' });
   };
 
+  const toggleCart = () => {
+    dispatch({ type: 'TOGGLE_CART' });
+  };
+
+  const openCart = () => {
+    dispatch({ type: 'OPEN_CART' });
+  };
+
+  const closeCart = () => {
+    dispatch({ type: 'CLOSE_CART' });
+  };
+
   const getItemQuantity = (id: string): number => {
     const item = state.items.find(item => item.id === id);
     return item?.quantity || 0;
@@ -217,6 +259,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       uniqueItems: state.items.length,
     };
   };
+
   const value: CartContextType = {
     state,
     addItem,
@@ -229,6 +272,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isInCart,
     getTotalItems,
     getCartSummary,
+    toggleCart,
+    openCart,
+    closeCart,
   };
 
   return (
