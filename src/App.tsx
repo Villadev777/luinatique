@@ -20,7 +20,7 @@ import ProfilePage from "./pages/ProfilePage";
 import FavoritesPage from "./pages/FavoritesPage";
 import OrdersPage from "./pages/OrdersPage";
 import SettingsPage from "./pages/SettingsPage";
-import Garantia from "./pages/Garantia"; // ← Agregar esta línea
+import Garantia from "./pages/Garantia";
 import Anillos from "./pages/categories/Anillos";
 import Aretes from "./pages/categories/Aretes";
 import Collares from "./pages/categories/Collares";
@@ -29,6 +29,9 @@ import Llaveros from "./pages/categories/Llaveros";
 import Prendedores from "./pages/categories/Prendedores";
 import Envios from "./pages/Envios";
 import Privacidad from "./pages/Privacidad";
+// Import payment pages
+import CheckoutPage from "./pages/CheckoutPage";
+import PaymentResult from "./pages/PaymentResult";
 
 const queryClient = new QueryClient();
 
@@ -53,7 +56,7 @@ const App = () => (
               <Route path="/lunatique" element={<Lunatique />} />
               <Route path="/contactanos" element={<Contact />} />
               <Route path="/admin" element={<Admin />} />
-              <Route path="/garantia" element={<Garantia />} /> {/* ← Agregar esta línea */}
+              <Route path="/garantia" element={<Garantia />} />
               <Route path="/envios" element={<Envios />} />
               <Route path="/privacidad" element={<Privacidad />} />
               
@@ -62,6 +65,12 @@ const App = () => (
               <Route path="/favorites" element={<FavoritesPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              
+              {/* Payment Pages */}
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/payment/success" element={<PaymentResult />} />
+              <Route path="/payment/failure" element={<PaymentResult />} />
+              <Route path="/payment/pending" element={<PaymentResult />} />
               
               {/* Category Pages */}
               <Route path="/shop/anillos" element={<Anillos />} />
