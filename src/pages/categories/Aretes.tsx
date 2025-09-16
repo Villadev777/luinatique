@@ -32,24 +32,24 @@ const Aretes = () => {
   const [loading, setLoading] = useState(true);
   const [categoryInfo, setCategoryInfo] = useState<{title: string; description: string} | null>(null);
 
-  const subcategories = {
-    'miyuki': {
-      title: 'Aretes Miyuki',
-      description: 'Aretes delicados con la técnica japonesa Miyuki, perfectos para un look elegante y sofisticado.',
-    },
-    'alambrismo': {
-      title: 'Aretes de Alambrismo',
-      description: 'Aretes únicos creados con alambrismo artesanal, cada par cuenta una historia diferente.',
-    },
-    'bordados': {
-      title: 'Aretes Bordados',
-      description: 'Aretes con bordados tradicionales que combinan técnicas ancestrales con diseños contemporáneos.',
-    },
-    'soutache': {
-      title: 'Aretes Soutache',
-      description: 'Aretes elaborados con la técnica soutache, creando texturas y formas fascinantes.',
-    }
-  };
+const subcategories = {
+  'miyuki': {
+    title: 'Aretes Miyuki',
+    description: 'Aretes delicados con la técnica japonesa Miyuki...',
+  },
+  'alambrismo-aretes': {  // ← Cambio aquí
+    title: 'Aretes de Alambrismo',
+    description: 'Aretes únicos creados con alambrismo artesanal...',
+  },
+  'bordados-aretes': {    // ← Cambio aquí
+    title: 'Aretes Bordados',
+    description: 'Aretes con bordados tradicionales...',
+  },
+  'soutache-aretes': {    // ← Cambio aquí
+    title: 'Aretes Soutache',
+    description: 'Aretes elaborados con la técnica soutache...',
+  }
+};
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-ES', {
