@@ -1,10 +1,17 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+// Initialize Supabase client
+const supabaseClient = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
 
 // PayPal API configuration
 const getPayPalConfig = () => {
@@ -48,6 +55,56 @@ async function getPayPalAccessToken(): Promise<string> {
   
   const data = await response.json();
   return data.access_token;
+}
+
+// Store order in database
+async function storeOrderInDatabase(orderData: any, paypalOrderId: string) {
+  try {
+    const { purchase_units } = orderData;
+    const purchaseUnit = purchase_units[0];
+    const { amount, items, reference_id } = purchaseUnit;
+    
+    // Create external reference if not provided
+    const externalRef = reference_id || `PAYPAL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Calculate PEN amount (approximate conversion)
+    const exchangeRate = 3.7; // USD to PEN approximate rate
+    const usdAmount = parseFloat(amount.value);
+    const penAmount = usdAmount * exchangeRate;
+    
+    // Extract customer info from items or use defaults
+    const customerEmail = orderData.customer_email || 'customer@example.com';
+    const customerName = orderData.customer_name || 'PayPal Customer';
+    
+    const { data, error } = await supabaseClient
+      .from('orders')
+      .insert({
+        payment_method: 'paypal',
+        external_reference: externalRef,
+        paypal_order_id: paypalOrderId,
+        total_amount: penAmount,
+        currency: 'USD',
+        exchange_rate: exchangeRate,
+        customer_email: customerEmail,
+        customer_name: customerName,
+        items: items || [],
+        status: 'pending',
+        payment_status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database error:', error);
+      throw new Error(`Failed to store order: ${error.message}`);
+    }
+
+    console.log('✅ Order stored in database:', data.id);
+    return data;
+  } catch (error) {
+    console.error('❌ Error storing order in database:', error);
+    throw error;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -116,6 +173,14 @@ Deno.serve(async (req: Request) => {
       id: result.id,
       status: result.status
     });
+
+    // Store order in database
+    try {
+      await storeOrderInDatabase(orderData, result.id);
+    } catch (dbError) {
+      console.error('⚠️ Failed to store order in database (PayPal order still created):', dbError);
+      // Don't fail the entire request if DB storage fails
+    }
 
     return new Response(
       JSON.stringify(result),
