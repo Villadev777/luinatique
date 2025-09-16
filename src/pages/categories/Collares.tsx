@@ -33,23 +33,23 @@ const Collares = () => {
   const [categoryInfo, setCategoryInfo] = useState<{title: string; description: string} | null>(null);
 
   const subcategories = {
-    'miyuki': {
-      title: 'Collares Miyuki',
-      description: 'Collares delicados con cuentas Miyuki que crean patrones únicos y coloridos.',
-    },
-    'alambrismo': {
-      title: 'Collares de Alambrismo',
-      description: 'Collares artesanales con técnicas de alambrismo que crean formas orgánicas y naturales.',
-    },
-    'bordados': {
-      title: 'Collares Bordados',
-      description: 'Collares con bordados tradicionales que celebran la riqueza cultural de nuestras tradiciones.',
-    },
-    'soutache': {
-      title: 'Collares Soutache',
-      description: 'Collares elaborados con soutache, creando texturas y volúmenes únicos.',
-    }
-  };
+  'miyuki-collares': {
+    title: 'Collares Miyuki',
+    description: 'Collares delicados con la técnica japonesa Miyuki...',
+  },
+  'alambrismo-collares': {
+    title: 'Collares de Alambrismo',
+    description: 'Collares únicos creados con alambrismo artesanal...',
+  },
+  'bordados-collares': {
+    title: 'Collares Bordados',
+    description: 'Collares con bordados tradicionales...',
+  },
+  'soutache-collares': {
+    title: 'Collares Soutache',
+    description: 'Collares elaborados con la técnica soutache...',
+  }
+};
 
   useEffect(() => {
     const fetchProducts = async () => {
