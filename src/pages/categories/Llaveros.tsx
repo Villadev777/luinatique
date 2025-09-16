@@ -33,15 +33,15 @@ const Llaveros = () => {
   const [categoryInfo, setCategoryInfo] = useState<{title: string; description: string} | null>(null);
 
   const subcategories = {
-    'miyuki': {
-      title: 'Llaveros Miyuki',
-      description: 'Llaveros coloridos y únicos con cuentas Miyuki que añaden un toque especial a tus llaves.',
-    },
-    'resina': {
-      title: 'Llaveros de Resina',
-      description: 'Llaveros de resina con diseños encapsulados, duraderos y con acabados brillantes.',
-    }
-  };
+  'miyuki-llaveros': {
+    title: 'Llaveros Miyuki',
+    description: 'Llaveros delicados con la técnica japonesa Miyuki...',
+  },
+  'resina': {
+    title: 'Llaveros de Resina',
+    description: 'Llaveros únicos hechos con resina...',
+  }
+};
 
   useEffect(() => {
     const fetchProducts = async () => {
