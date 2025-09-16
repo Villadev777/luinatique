@@ -37,10 +37,17 @@ const Anillos = () => {
       title: 'Anillos Miyuki',
       description: 'Anillos delicados inspirados en la técnica japonesa Miyuki, con cuentas diminutas y diseños únicos.',
     },
-    'alambrismo': {
+    'alambrismo-anillos': {
       title: 'Anillos de Alambrismo',
       description: 'Anillos artesanales creados con técnicas de alambrismo, cada pieza es única y hecha a mano.',
     }
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'PEN',
+    }).format(price);
   };
 
   useEffect(() => {
@@ -55,11 +62,19 @@ const Anillos = () => {
             setCategoryInfo(currentSubcategory);
           }
 
-          // Get subcategory ID first
+          // Get subcategory ID first - CONSULTA CORREGIDA
           const { data: subcategoryData, error: subcategoryError } = await supabase
             .from('subcategories')
-            .select('id')
+            .select(`
+              id,
+              category_section:category_sections(
+                slug,
+                main_category:main_categories(slug)
+              )
+            `)
             .eq('slug', subcategory)
+            .eq('category_section.slug', 'anillos')
+            .eq('category_section.main_category.slug', 'tienda')
             .single();
 
           if (subcategoryError || !subcategoryData) {
@@ -144,13 +159,6 @@ const Anillos = () => {
     fetchProducts();
   }, [subcategory]);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(price);
-  };
-
   const getDiscountPercentage = (originalPrice: number, salePrice: number) => {
     return Math.round(((originalPrice - salePrice) / originalPrice) * 100);
   };
@@ -181,7 +189,7 @@ const Anillos = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/shop')}
+                onClick={() => navigate('/shop/anillos')}
                 className="p-0 h-auto hover:bg-transparent"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -222,7 +230,7 @@ const Anillos = () => {
                 <p className="text-muted-foreground mb-8">
                   Actualmente no tenemos anillos en esta categoría, pero pronto habrá nuevos productos.
                 </p>
-                <Button onClick={() => navigate('/shop')}>
+                <Button onClick={() => navigate('/shop/anillos')}>
                   Ver Todos los Productos
                 </Button>
               </div>
@@ -257,7 +265,7 @@ const Anillos = () => {
                           <div className="absolute top-3 right-3">
                             <Badge variant="secondary" className="flex items-center gap-1">
                               <Star className="h-3 w-3" />
-                              Featured
+                              Destacado
                             </Badge>
                           </div>
                         )}
@@ -265,7 +273,7 @@ const Anillos = () => {
                       
                       <CardContent className="p-6">
                         <h3 className="font-playfair text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
-                          <a href={`/product/${product.slug}`}>
+                          <a href={`/product/${product.slug}?from=anillos`}>
                             {product.name}
                           </a>
                         </h3>
@@ -331,7 +339,7 @@ const Anillos = () => {
               Explora otras categorías o contáctanos para crear un diseño personalizado.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" onClick={() => navigate('/shop')}>
+              <Button size="lg" onClick={() => navigate('/shop/anillos')}>
                 Ver Todas las Categorías
               </Button>
               <Button size="lg" variant="outline" onClick={() => navigate('/contactanos')}>
