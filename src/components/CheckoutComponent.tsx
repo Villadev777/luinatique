@@ -7,13 +7,16 @@ import { Separator } from './ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { mercadoPagoService } from '../lib/mercadopago';
 import { CheckoutData, CartItem } from '../types/mercadopago';
-import { Loader2, CreditCard, Shield } from 'lucide-react';
+import PaymentMethodSelector from './PaymentMethodSelector';
+import { Loader2, CreditCard, Shield, ArrowLeft } from 'lucide-react';
 
 interface CheckoutComponentProps {
   items: CartItem[];
   onSuccess?: (preferenceId: string) => void;
   onError?: (error: string) => void;
 }
+
+type CheckoutStep = 'form' | 'payment';
 
 export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
   items,
@@ -22,6 +25,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState<CheckoutStep>('form');
   const [customerData, setCustomerData] = useState({
     email: '',
     name: '',
@@ -37,7 +41,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
 
   const total = mercadoPagoService.calculateTotal(items);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!customerData.email || !customerData.name) {
@@ -49,6 +53,11 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
       return;
     }
 
+    // Proceed to payment method selection
+    setCurrentStep('payment');
+  };
+
+  const handleMercadoPagoPayment = async () => {
     setLoading(true);
 
     try {
@@ -84,19 +93,63 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
     }
   };
 
+  const preparePaymentData = (): CheckoutData => {
+    return {
+      items,
+      customer: customerData,
+      shippingAddress: shippingData.street ? shippingData : undefined,
+    };
+  };
+
+  if (currentStep === 'payment') {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Button 
+            variant="outline" 
+            onClick={() => setCurrentStep('form')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Selecciona tu método de pago</h1>
+            <p className="text-muted-foreground">
+              Cliente: {customerData.name} ({customerData.email})
+            </p>
+          </div>
+        </div>
+        
+        <PaymentMethodSelector 
+          checkoutData={preparePaymentData()}
+          onSuccess={onSuccess}
+          onError={onError}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold mb-2">Finalizar Compra</h1>
+        <p className="text-muted-foreground">
+          Complete sus datos para proceder con el pago
+        </p>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-6">
         {/* Formulario de Checkout */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Información de Pago
+              Información del Cliente
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               {/* Datos del Cliente */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Datos del Cliente</h3>
@@ -210,13 +263,13 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
                 ) : (
                   <>
                     <Shield className="mr-2 h-4 w-4" />
-                    Pagar con MercadoPago
+                    Continuar al Pago
                   </>
                 )}
               </Button>
 
               <div className="text-xs text-muted-foreground text-center">
-                Al hacer clic en "Pagar", serás redirigido a MercadoPago para completar tu pago de forma segura.
+                En el siguiente paso podrás elegir entre MercadoPago (soles) o PayPal (USD) para completar tu pago.
               </div>
             </form>
           </CardContent>
@@ -251,17 +304,21 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
 
             <div className="bg-muted p-4 rounded-lg">
               <h4 className="font-semibold mb-2">Métodos de Pago Disponibles</h4>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>• Tarjetas de crédito y débito</p>
-                <p>• Transferencia bancaria</p>
-                <p>• PagoEfectivo</p>
-                <p>• Cuotas sin interés disponibles</p>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span><strong>MercadoPago (PEN):</strong> Tarjetas locales, transferencias, PagoEfectivo</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span><strong>PayPal (USD):</strong> Pagos internacionales seguros</span>
+                </div>
               </div>
             </div>
 
             <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
               <Shield className="h-4 w-4" />
-              <span>Pago 100% seguro con MercadoPago</span>
+              <span>Pagos 100% seguros y encriptados</span>
             </div>
           </CardContent>
         </Card>
