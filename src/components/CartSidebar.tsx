@@ -1,154 +1,312 @@
 import React from 'react';
-import { useCart } from '../context/CartContext';
-import useCheckout from '../hooks/useCheckout';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Separator } from './ui/separator';
-import { ShoppingCart, Plus, Minus, Trash2, CreditCard } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
+import useCheckout from '@/hooks/useCheckout';
+import { Button } from '@/components/ui/button'; 
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { ShoppingBag, Plus, Minus, Trash2, X, CreditCard } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 export const CartSidebar: React.FC = () => {
-  const { state, updateQuantity, removeItem } = useCart();
+  const { state, increaseQuantity, decreaseQuantity, removeItem, clearCart, closeCart } = useCart();
   const { goToCheckout, formatPrice, canCheckout } = useCheckout();
+  const { toast } = useToast();
+  const [promoCode, setPromoCode] = React.useState('');
+  const [appliedPromo, setAppliedPromo] = React.useState<string | null>(null);
+  const [discount, setDiscount] = React.useState(0);
 
-  if (state.items.length === 0) {
-    return (
-      <Card className="w-full max-w-md">
-        <CardContent className="flex flex-col items-center justify-center p-8 space-y-4">
-          <ShoppingCart className="h-16 w-16 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Tu carrito está vacío</h3>
-          <p className="text-muted-foreground text-center">
-            Agrega productos para continuar con tu compra
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const getItemPrice = (item: any) => {
+    return item.sale_price || item.price;
+  };
+
+  const handleApplyPromo = () => {
+    // Simulamos algunos códigos promocionales
+    const promoCodes = {
+      'WELCOME10': 0.10,
+      'SAVE20': 0.20,
+      'FIRST15': 0.15,
+    };
+
+    const discountRate = promoCodes[promoCode.toUpperCase() as keyof typeof promoCodes];
+    
+    if (discountRate) {
+      setAppliedPromo(promoCode.toUpperCase());
+      setDiscount(state.totalPrice * discountRate);
+      setPromoCode('');
+      toast({
+        title: "¡Código promocional aplicado!",
+        description: `Ahorraste ${(discountRate * 100).toFixed(0)}% en tu pedido.`,
+      });
+    } else {
+      toast({
+        title: "Código promocional inválido",
+        description: "Por favor verifica tu código e intenta de nuevo.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setDiscount(0);
+    toast({
+      title: "Código promocional removido",
+      description: "El descuento ha sido removido de tu pedido.",
+    });
+  };
+
+  const handleCheckout = () => {
+    closeCart();
+    goToCheckout();
+  };
+
+  const subtotal = state.totalPrice;
+  const shipping = subtotal >= 50 ? 0 : 9.99;
+  const tax = (subtotal - discount) * 0.18; // 18% tax
+  const finalTotal = subtotal - discount + shipping + tax;
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
+    <Sheet open={state.isOpen} onOpenChange={(open) => !open && closeCart()}>
+      <SheetContent className="w-full sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5" />
             Carrito de Compras
-          </span>
-          <Badge variant="secondary">
-            {state.items.length} {state.items.length === 1 ? 'producto' : 'productos'}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Lista de productos */}
-        <div className="space-y-4 max-h-64 overflow-y-auto">
-          {state.items.map((item) => (
-            <div key={item.id} className="flex gap-3 p-3 border rounded-lg">
-              {/* Imagen del producto */}
-              <div className="flex-shrink-0">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-16 h-16 object-cover rounded-md"
-                />
+            {state.totalItems > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {state.totalItems} {state.totalItems === 1 ? 'producto' : 'productos'}
+              </Badge>
+            )}
+          </SheetTitle>
+          <SheetDescription>
+            {state.totalItems === 0 
+              ? "Tu carrito está vacío" 
+              : `${state.totalItems} ${state.totalItems === 1 ? 'producto' : 'productos'} en tu carrito`
+            }
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex flex-col h-full">
+          {state.items.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+              <ShoppingBag className="h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Tu carrito está vacío</h3>
+              <p className="text-muted-foreground mb-6">
+                Descubre nuestras hermosas colecciones de joyería y agrega algunos productos a tu carrito.
+              </p>
+              <Button onClick={closeCart}>
+                Continuar Comprando
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto py-6">
+                <div className="space-y-4">
+                  {state.items.map((item) => (
+                    <div key={item.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                      <div className="flex-shrink-0">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-16 h-16 object-cover rounded-md"
+                        />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm leading-tight mb-1">
+                          {item.name}
+                        </h4>
+                        
+                        {item.selectedSize && (
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Talla: {item.selectedSize}
+                          </p>
+                        )}
+                        
+                        {item.selectedMaterial && (
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Material: {item.selectedMaterial}
+                          </p>
+                        )}
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => decreaseQuantity(item.id)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="text-sm font-medium w-8 text-center">
+                              {item.quantity}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => increaseQuantity(item.id)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          
+                          <div className="text-right">
+                            <p className="text-sm font-semibold">
+                              {formatPrice(getItemPrice(item) * item.quantity)}
+                            </p>
+                            {item.sale_price && item.sale_price < item.price && (
+                              <p className="text-xs text-muted-foreground line-through">
+                                {formatPrice(item.price * item.quantity)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeItem(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              
-              {/* Información del producto */}
-              <div className="flex-1 space-y-2">
-                <div>
-                  <h4 className="font-medium text-sm">{item.name}</h4>
-                  {item.selectedSize && (
-                    <p className="text-xs text-muted-foreground">
-                      Talla: {item.selectedSize}
-                    </p>
-                  )}
-                  {item.selectedMaterial && (
-                    <p className="text-xs text-muted-foreground">
-                      Material: {item.selectedMaterial}
-                    </p>
+
+              <Separator className="my-4" />
+              <div className="border-t pt-4 space-y-4">
+                {/* Promo Code Section */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Código Promocional</h4>
+                  {appliedPromo ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          {appliedPromo}
+                        </Badge>
+                        <span className="text-sm text-green-700 dark:text-green-300">
+                          -{formatPrice(discount)}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemovePromo}
+                        className="h-6 w-6 p-0 text-green-700 hover:text-green-900 dark:text-green-300"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Ingresa código promocional"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        className="flex-1"
+                        onKeyPress={(e) => e.key === 'Enter' && handleApplyPromo()}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleApplyPromo}
+                        disabled={!promoCode.trim()}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
                   )}
                 </div>
-                
-                {/* Precio */}
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-sm">
-                    {formatPrice(item.sale_price || item.price)}
-                  </span>
-                  
-                  {/* Controles de cantidad */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      disabled={item.quantity <= 1}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    
-                    <span className="min-w-8 text-center text-sm font-medium">
-                      {item.quantity}
-                    </span>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeItem(item.id)}
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span>{formatPrice(subtotal)}</span>
+                  </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                      <span>Descuento ({appliedPromo}):</span>
+                      <span>-{formatPrice(discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Envío:</span>
+                    <span>{shipping === 0 ? 'GRATIS' : formatPrice(shipping)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>IGV:</span>
+                    <span>{formatPrice(tax)}</span>
                   </div>
                 </div>
+                
+                <Separator />
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-base font-semibold">Total:</span>
+                  <span className="text-lg font-bold">
+                    {formatPrice(finalTotal)}
+                  </span>
+                </div>
+                
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full" 
+                    size="lg"
+                    onClick={handleCheckout}
+                    disabled={!canCheckout}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Proceder al Pago
+                  </Button>
+                  
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={closeCart}
+                  >
+                    Continuar Comprando
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={clearCart}
+                    disabled={state.items.length === 0}
+                  >
+                    Vaciar Carrito
+                  </Button>
+                </div>
+                
+                <p className="text-xs text-muted-foreground text-center">
+                  Envío gratis en pedidos superiores a S/ 50
+                </p>
+                
+                {/* Estimated delivery */}
+                <div className="text-center p-3 bg-muted/50 rounded-md">
+                  <p className="text-xs text-muted-foreground">
+                    📦 Entrega estimada: 3-5 días hábiles
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            </>
+          )}
         </div>
-
-        <Separator />
-
-        {/* Resumen del total */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Subtotal:</span>
-            <span>{formatPrice(state.totalPrice)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>Envío:</span>
-            <span className="text-muted-foreground">Calculado en checkout</span>
-          </div>
-          <Separator />
-          <div className="flex justify-between font-semibold">
-            <span>Total:</span>
-            <span>{formatPrice(state.totalPrice)}</span>
-          </div>
-        </div>
-
-        {/* Botón de Checkout */}
-        <Button 
-          onClick={goToCheckout}
-          disabled={!canCheckout}
-          className="w-full"
-          size="lg"
-        >
-          <CreditCard className="mr-2 h-4 w-4" />
-          Proceder al Pago
-        </Button>
-
-        <p className="text-xs text-muted-foreground text-center">
-          Pago seguro con MercadoPago
-        </p>
-      </CardContent>
-    </Card>
+      </SheetContent>
+    </Sheet>
   );
 };
