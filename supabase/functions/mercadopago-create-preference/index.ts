@@ -1,107 +1,59 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { MercadoPago, Preference } from "npm:mercadopago";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { corsHeaders } from '../_shared/cors.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Importación correcta del SDK de MercadoPago
+import MercadoPago from "npm:mercadopago@2.0.15"
 
-Deno.serve(async (req: Request) => {
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Verify method
-    if (req.method !== 'POST') {
-      return new Response(
-        JSON.stringify({ error: 'Method not allowed' }),
-        { 
-          status: 405, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Get MercadoPago credentials from environment
-    const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+    // Configurar MercadoPago con el access token
+    const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN')
     if (!accessToken) {
-      return new Response(
-        JSON.stringify({ error: 'MercadoPago access token not configured' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured')
     }
 
-    // Initialize MercadoPago
-    const client = new MercadoPago({
-      accessToken: accessToken,
-      options: {
-        timeout: 5000,
-        idempotencyKey: crypto.randomUUID()
-      }
-    });
+    MercadoPago.configurations.setAccessToken(accessToken)
 
-    // Parse request body
-    const preferenceData = await req.json();
+    // Obtener los datos del request
+    const preferenceData = await req.json()
+
+    console.log('Received preference data:', JSON.stringify(preferenceData, null, 2))
+
+    // Crear la preferencia
+    const preference = await MercadoPago.preferences.create(preferenceData)
     
-    // Validate required fields
-    if (!preferenceData.items || !Array.isArray(preferenceData.items) || preferenceData.items.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Items are required and must be a non-empty array' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Create preference
-    const preference = new Preference(client);
-    const result = await preference.create({
-      body: {
-        ...preferenceData,
-        // Ensure auto_return is set
-        auto_return: preferenceData.auto_return || 'approved',
-        // Add default payment methods if not provided
-        payment_methods: {
-          installments: 12,
-          ...preferenceData.payment_methods
-        },
-        // Add metadata
-        metadata: {
-          source: 'luinatique_ecommerce',
-          timestamp: new Date().toISOString(),
-          ...preferenceData.metadata
-        }
-      }
-    });
-
-    console.log('Preference created:', result);
+    console.log('Preference created:', preference.body)
 
     return new Response(
-      JSON.stringify(result),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
-
+      JSON.stringify(preference.body),
+      {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
+        status: 200,
+      },
+    )
   } catch (error) {
-    console.error('Error creating MercadoPago preference:', error);
+    console.error('Error creating preference:', error)
     
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to create payment preference',
-        details: error.message 
+        error: error.message || 'Error creating preference',
+        details: error.stack || 'No additional details'
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+      {
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
+        status: 500,
+      },
+    )
   }
-});
+})
