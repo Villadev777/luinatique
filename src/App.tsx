@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/context/CartContext";
-import { CartDrawer } from "@/components/CartDrawer";
+import { CartSidebar } from "@/components/CartSidebar";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
@@ -97,8 +97,8 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             
-            {/* CartDrawer - Se muestra globalmente */}
-            <CartDrawer />
+            {/* CartSidebar - Se muestra globalmente cuando state.isOpen es true */}
+            <CartSidebar />
           </BrowserRouter>
         </TooltipProvider>
       </CartProvider>
