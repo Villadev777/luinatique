@@ -6,7 +6,7 @@ import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { mercadoPagoService } from '../lib/mercadopago';
 import { PaymentStatus } from '../types/mercadopago';
 
-export const PaymentResult: React.FC = () => {
+const PaymentResult: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -294,3 +294,5 @@ export const PaymentResult: React.FC = () => {
     </div>
   );
 };
+
+export default PaymentResult;
