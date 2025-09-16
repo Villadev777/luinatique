@@ -30,6 +30,9 @@ export class MercadoPagoService {
     try {
       const preferenceData: PreferenceRequest = this.buildPreferenceRequest(checkoutData);
       
+      console.log('Creating preference with data:', preferenceData);
+      console.log('API URL:', `${MERCADOPAGO_API_URL}/mercadopago-create-preference`);
+      
       const response = await fetch(`${MERCADOPAGO_API_URL}/mercadopago-create-preference`, {
         method: 'POST',
         headers: {
@@ -39,16 +42,20 @@ export class MercadoPagoService {
         body: JSON.stringify(preferenceData),
       });
 
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Error response:', errorData);
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const preference: PreferenceResponse = await response.json();
+      console.log('Preference created successfully:', preference);
       return preference;
     } catch (error) {
       console.error('Error creating MercadoPago preference:', error);
-      throw new Error('Error al crear la preferencia de pago');
+      throw new Error('Error al crear la preferencia de pago: ' + (error instanceof Error ? error.message : 'Error desconocido'));
     }
   }
 
@@ -94,6 +101,16 @@ export class MercadoPagoService {
     const processing_mode = params.get('processing_mode');
     const merchant_account_id = params.get('merchant_account_id');
 
+    console.log('Processing payment callback with params:', {
+      collection_id,
+      collection_status,
+      payment_id,
+      status,
+      external_reference,
+      payment_type,
+      preference_id
+    });
+
     // Si tenemos un payment_id, obtenemos los detalles del pago
     if (payment_id) {
       try {
@@ -135,7 +152,7 @@ export class MercadoPagoService {
   private buildPreferenceRequest(checkoutData: CheckoutData): PreferenceRequest {
     const baseUrl = window.location.origin;
     
-    return {
+    const preference: PreferenceRequest = {
       items: checkoutData.items.map(item => ({
         id: item.id,
         title: item.title,
@@ -191,6 +208,9 @@ export class MercadoPagoService {
         order_timestamp: new Date().toISOString(),
       },
     };
+
+    console.log('Built preference request:', preference);
+    return preference;
   }
 
   /**
@@ -233,6 +253,7 @@ export class MercadoPagoService {
    */
   redirectToCheckout(preference: PreferenceResponse, useSandbox: boolean = true): void {
     const checkoutUrl = useSandbox ? preference.sandbox_init_point : preference.init_point;
+    console.log('Redirecting to checkout:', checkoutUrl);
     window.location.href = checkoutUrl;
   }
 
