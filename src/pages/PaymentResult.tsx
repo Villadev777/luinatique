@@ -114,7 +114,7 @@ const PaymentResult: React.FC = () => {
             <p className="text-center text-muted-foreground">{error}</p>
             <div className="flex gap-2">
               <Button 
-                onClick={() => navigate('/shop')} 
+                onClick={() => navigate('/')} 
                 variant="outline" 
                 className="flex-1"
               >
@@ -145,7 +145,7 @@ const PaymentResult: React.FC = () => {
             <p className="text-muted-foreground text-center">
               No pudimos obtener los detalles de tu pago
             </p>
-            <Button onClick={() => navigate('/shop')}>
+            <Button onClick={() => navigate('/')}>
               Volver a la Tienda
             </Button>
           </CardContent>
@@ -225,7 +225,7 @@ const PaymentResult: React.FC = () => {
                   Ver Mis Pedidos
                 </Button>
                 <Button 
-                  onClick={() => navigate('/shop')} 
+                  onClick={() => navigate('/')} 
                   variant="outline" 
                   className="flex-1 max-w-48"
                 >
@@ -236,7 +236,7 @@ const PaymentResult: React.FC = () => {
 
             {['rejected', 'cancelled'].includes(paymentStatus.status) && (
               <>
-                <Button onClick={() => navigate('/shop')} className="flex-1 max-w-48">
+                <Button onClick={() => navigate('/')} className="flex-1 max-w-48">
                   Intentar Nuevamente
                 </Button>
                 <Button 
@@ -255,7 +255,7 @@ const PaymentResult: React.FC = () => {
                   Ver Estado del Pedido
                 </Button>
                 <Button 
-                  onClick={() => navigate('/shop')} 
+                  onClick={() => navigate('/')} 
                   variant="outline" 
                   className="flex-1 max-w-48"
                 >
