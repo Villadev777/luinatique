@@ -132,8 +132,8 @@ export class PayPalService {
         brand_name: 'LUNATIQUE',
         landing_page: 'NO_PREFERENCE',
         user_action: 'PAY_NOW',
-        return_url: `${window.location.origin}/`,
-        cancel_url: `${window.location.origin}/`,
+        return_url: `${window.location.origin}/payment/success`,
+        cancel_url: `${window.location.origin}/payment/failure`,
       },
     };
   }
@@ -227,8 +227,8 @@ export class PayPalService {
       },
       onCancel: (data) => {
         console.log('PayPal payment cancelled:', data);
-        // Redirect to home page instead of failure page
-        window.location.href = '/';
+        // Redirect to failure page for cancellation
+        window.location.href = '/payment/failure';
       },
       style: {
         layout: 'vertical',
