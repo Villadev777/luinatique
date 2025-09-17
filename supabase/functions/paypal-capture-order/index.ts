@@ -5,6 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
 // Initialize Supabase client
@@ -115,6 +116,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     console.log('🚀 PayPal Capture Order - Start');
+    console.log('🌐 Origin:', req.headers.get('origin'));
     
     if (req.method !== 'POST') {
       return new Response(
