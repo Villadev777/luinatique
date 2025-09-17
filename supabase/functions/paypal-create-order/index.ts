@@ -5,6 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
 // Initialize Supabase client
@@ -115,6 +116,14 @@ Deno.serve(async (req: Request) => {
 
   try {
     console.log('🚀 PayPal Create Order - Start');
+    console.log('🌐 Origin:', req.headers.get('origin'));
+    console.log('🔧 Environment check:', {
+      hasClientId: !!Deno.env.get('PAYPAL_CLIENT_ID'),
+      hasClientSecret: !!Deno.env.get('PAYPAL_CLIENT_SECRET'),
+      mode: Deno.env.get('PAYPAL_MODE'),
+      hasSupabaseUrl: !!Deno.env.get('SUPABASE_URL'),
+      hasServiceKey: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    });
     
     if (req.method !== 'POST') {
       return new Response(
