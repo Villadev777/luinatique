@@ -37,19 +37,50 @@ export class MercadoPagoService {
   }
 
   /**
+   * Verifica la configuración del servicio
+   */
+  async checkConfiguration(): Promise<{
+    isConfigured: boolean;
+    environment: 'development' | 'production';
+    issues: string[];
+  }> {
+    const issues: string[] = [];
+    
+    // Check environment variables
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      issues.push('VITE_SUPABASE_URL not configured');
+    }
+    
+    if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      issues.push('VITE_SUPABASE_ANON_KEY not configured');
+    }
+
+    const environment = window.location.hostname === 'localhost' ? 'development' : 'production';
+    
+    return {
+      isConfigured: issues.length === 0,
+      environment,
+      issues
+    };
+  }
+
+  /**
    * Crea una preferencia de pago en MercadoPago
    */
   async createPreference(checkoutData: CheckoutData): Promise<PreferenceResponse> {
     try {
       const preferenceData: PreferenceRequest = this.buildPreferenceRequest(checkoutData);
       
-      console.log('Creating preference with data:', preferenceData);
-      console.log('API URL:', `${MERCADOPAGO_API_URL}/mercadopago-create-preference`);
-      console.log('Environment check:', {
-        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
-        hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
-        currentHost: window.location.hostname
-      });
+      console.log('🚀 Creating MercadoPago preference...');
+      console.log('📝 Preference data:', preferenceData);
+      console.log('🔗 API URL:', `${MERCADOPAGO_API_URL}/mercadopago-create-preference`);
+      
+      const config = await this.checkConfiguration();
+      console.log('⚙️ Configuration check:', config);
+
+      if (!config.isConfigured) {
+        throw new Error(`Configuration issues: ${config.issues.join(', ')}`);
+      }
       
       const response = await fetch(`${MERCADOPAGO_API_URL}/mercadopago-create-preference`, {
         method: 'POST',
@@ -60,20 +91,74 @@ export class MercadoPagoService {
         body: JSON.stringify(preferenceData),
       });
 
-      console.log('Response status:', response.status);
+      console.log('📥 Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: response.url
+      });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error response:', errorData);
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      let responseData;
+      const responseText = await response.text();
+      
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Failed to parse response as JSON:', responseText);
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}...`);
       }
 
-      const preference: PreferenceResponse = await response.json();
-      console.log('Preference created successfully:', preference);
+      if (!response.ok) {
+        console.error('❌ MercadoPago API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseData
+        });
+        
+        // Provide more specific error messages based on status
+        let errorMessage = 'Error al crear la preferencia de pago';
+        
+        switch (response.status) {
+          case 400:
+            errorMessage = `Datos inválidos: ${responseData.error || 'Verifique los datos del producto'}`;
+            break;
+          case 401:
+            errorMessage = 'Token de MercadoPago inválido o expirado';
+            break;
+          case 403:
+            errorMessage = 'Acceso denegado. Verifique las credenciales de MercadoPago';
+            break;
+          case 404:
+            errorMessage = 'Servicio no encontrado. Verifique que las Edge Functions estén desplegadas';
+            break;
+          case 500:
+            errorMessage = `Error del servidor: ${responseData.details || responseData.error || 'Error interno'}`;
+            break;
+          default:
+            errorMessage = `Error HTTP ${response.status}: ${responseData.error || response.statusText}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const preference: PreferenceResponse = responseData;
+      console.log('✅ Preference created successfully:', {
+        id: preference.id,
+        hasInitPoint: !!preference.init_point,
+        hasSandboxPoint: !!preference.sandbox_init_point,
+        external_reference: preference.external_reference
+      });
+      
       return preference;
     } catch (error) {
-      console.error('Error creating MercadoPago preference:', error);
-      throw new Error('Error al crear la preferencia de pago: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+      console.error('❌ Error creating MercadoPago preference:', error);
+      
+      // Enhance error messages for better UX
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Error de conexión: No se pudo conectar al servidor. Verifique su conexión a internet.');
+      }
+      
+      throw error instanceof Error ? error : new Error('Error desconocido al crear la preferencia');
     }
   }
 
@@ -82,6 +167,8 @@ export class MercadoPagoService {
    */
   async getPaymentStatus(paymentId: string): Promise<PaymentStatus> {
     try {
+      console.log('🔍 Getting payment status for ID:', paymentId);
+      
       const response = await fetch(`${MERCADOPAGO_API_URL}/mercadopago-get-payment/${paymentId}`, {
         method: 'GET',
         headers: {
@@ -92,13 +179,15 @@ export class MercadoPagoService {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Error getting payment status:', errorData);
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const payment: PaymentStatus = await response.json();
+      console.log('✅ Payment status retrieved:', payment);
       return payment;
     } catch (error) {
-      console.error('Error getting payment status:', error);
+      console.error('❌ Error getting payment status:', error);
       throw new Error('Error al obtener el estado del pago');
     }
   }
@@ -119,7 +208,7 @@ export class MercadoPagoService {
     const processing_mode = params.get('processing_mode');
     const merchant_account_id = params.get('merchant_account_id');
 
-    console.log('Processing payment callback with params:', {
+    console.log('🔄 Processing payment callback with params:', {
       collection_id,
       collection_status,
       payment_id,
@@ -134,7 +223,7 @@ export class MercadoPagoService {
       try {
         return await this.getPaymentStatus(payment_id);
       } catch (error) {
-        console.error('Error processing payment callback:', error);
+        console.error('❌ Error processing payment callback:', error);
       }
     }
 
@@ -224,10 +313,12 @@ export class MercadoPagoService {
       metadata: {
         customer_email: checkoutData.customer.email,
         order_timestamp: new Date().toISOString(),
+        source: 'luinatique_web',
+        version: '1.0.0'
       },
     };
 
-    console.log('Built preference request:', preference);
+    console.log('🏗️ Built preference request:', preference);
     return preference;
   }
 
@@ -279,7 +370,7 @@ export class MercadoPagoService {
     
     const checkoutUrl = useSandbox ? preference.sandbox_init_point : preference.init_point;
     
-    console.log('Redirecting to checkout:', {
+    console.log('🔗 Redirecting to checkout:', {
       useSandbox,
       checkoutUrl,
       hasProductionUrl: !!preference.init_point,
@@ -287,7 +378,7 @@ export class MercadoPagoService {
     });
     
     if (!checkoutUrl) {
-      console.error('No checkout URL available for the selected mode');
+      console.error('❌ No checkout URL available for the selected mode');
       throw new Error('URL de checkout no disponible');
     }
     
@@ -309,6 +400,20 @@ export class MercadoPagoService {
       style: 'currency',
       currency: 'PEN',
     }).format(price);
+  }
+
+  /**
+   * Obtiene información de debug del servicio
+   */
+  getDebugInfo() {
+    return {
+      apiUrl: MERCADOPAGO_API_URL,
+      supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+      hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+      environment: window.location.hostname === 'localhost' ? 'development' : 'production',
+      currentUrl: window.location.href,
+      timestamp: new Date().toISOString()
+    };
   }
 }
 
