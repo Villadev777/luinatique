@@ -36,6 +36,7 @@ import PaymentResult from "./pages/PaymentResult";
 import CartPage from "./pages/CartPage";
 import TestPage from "./pages/TestPage";
 import DiagnosticPage from "./pages/DiagnosticPage";
+import DiagnosticPageMP from "./pages/DiagnosticPageMP";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
               {/* Debug Pages */}
               <Route path="/test" element={<TestPage />} />
               <Route path="/diagnostic" element={<DiagnosticPage />} />
+              <Route path="/diagnostic-mp" element={<DiagnosticPageMP />} />
               
               {/* Category Pages */}
               <Route path="/shop/anillos" element={<Anillos />} />
