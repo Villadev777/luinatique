@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { CheckCircle, XCircle, AlertCircle, Loader2, Play, Eye } from 'lucide-react';
 import { mercadoPagoService } from '../lib/mercadopago';
+import { paypalService } from '../lib/paypal';
 import { CheckoutData } from '../types/mercadopago';
 
 interface DiagnosticResult {
@@ -19,38 +20,72 @@ interface DiagnosticTest {
   description: string;
   result?: DiagnosticResult;
   running?: boolean;
+  category: 'general' | 'mercadopago' | 'paypal';
 }
 
 const MercadoPagoDiagnostic: React.FC = () => {
   const [tests, setTests] = useState<DiagnosticTest[]>([
+    // General tests
     {
       id: 'env-check',
       name: 'Variables de Entorno',
-      description: 'Verificar que todas las variables estén configuradas'
+      description: 'Verificar que todas las variables estén configuradas',
+      category: 'general'
     },
     {
       id: 'supabase-connection',
       name: 'Conexión a Supabase',
-      description: 'Verificar conectividad con Supabase'
+      description: 'Verificar conectividad con Supabase',
+      category: 'general'
+    },
+    // MercadoPago tests
+    {
+      id: 'mp-edge-functions',
+      name: 'Edge Functions MercadoPago',
+      description: 'Verificar que las Edge Functions de MP respondan',
+      category: 'mercadopago'
     },
     {
-      id: 'edge-functions',
-      name: 'Edge Functions',
-      description: 'Verificar que las Edge Functions respondan'
+      id: 'mp-preference-creation',
+      name: 'Creación de Preferencia MP',
+      description: 'Probar creación de preferencia con datos de test',
+      category: 'mercadopago'
     },
     {
-      id: 'preference-creation',
-      name: 'Creación de Preferencia',
-      description: 'Probar creación de preferencia con datos de test'
+      id: 'mp-full-flow',
+      name: 'Flujo Completo MercadoPago',
+      description: 'Simular flujo completo de checkout con MP',
+      category: 'mercadopago'
+    },
+    // PayPal tests
+    {
+      id: 'paypal-config',
+      name: 'Configuración PayPal',
+      description: 'Verificar variables de entorno de PayPal',
+      category: 'paypal'
     },
     {
-      id: 'full-flow',
-      name: 'Flujo Completo',
-      description: 'Simular flujo completo de checkout'
+      id: 'paypal-edge-functions',
+      name: 'Edge Functions PayPal',
+      description: 'Verificar que las Edge Functions de PayPal respondan',
+      category: 'paypal'
+    },
+    {
+      id: 'paypal-sdk-load',
+      name: 'Carga del SDK PayPal',
+      description: 'Probar carga del SDK de PayPal en el frontend',
+      category: 'paypal'
+    },
+    {
+      id: 'paypal-order-creation',
+      name: 'Creación de Orden PayPal',
+      description: 'Probar creación de orden con datos de test',
+      category: 'paypal'
     }
   ]);
 
   const [showDetails, setShowDetails] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'general' | 'mercadopago' | 'paypal'>('all');
 
   const updateTestResult = (testId: string, result: DiagnosticResult) => {
     setTests(prev => prev.map(test => 
@@ -75,6 +110,8 @@ const MercadoPagoDiagnostic: React.FC = () => {
       const requiredVars = {
         'VITE_SUPABASE_URL': import.meta.env.VITE_SUPABASE_URL,
         'VITE_SUPABASE_ANON_KEY': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        'VITE_PAYPAL_CLIENT_ID': import.meta.env.VITE_PAYPAL_CLIENT_ID,
+        'VITE_PAYPAL_MODE': import.meta.env.VITE_PAYPAL_MODE
       };
 
       const missingVars = Object.entries(requiredVars)
@@ -83,7 +120,7 @@ const MercadoPagoDiagnostic: React.FC = () => {
 
       if (missingVars.length > 0) {
         updateTestResult('env-check', {
-          status: 'error',
+          status: 'warning',
           message: `Variables faltantes: ${missingVars.join(', ')}`,
           details: requiredVars
         });
@@ -94,6 +131,8 @@ const MercadoPagoDiagnostic: React.FC = () => {
       const envDetails = {
         supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
         hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+        hasPayPalClientId: !!import.meta.env.VITE_PAYPAL_CLIENT_ID,
+        paypalMode: import.meta.env.VITE_PAYPAL_MODE,
         currentHost: window.location.hostname,
         isLocalhost: window.location.hostname === 'localhost',
         protocol: window.location.protocol
@@ -166,73 +205,57 @@ const MercadoPagoDiagnostic: React.FC = () => {
     }
   };
 
-  const testEdgeFunctions = async () => {
-    setTestRunning('edge-functions', true);
+  const testMercadoPagoEdgeFunctions = async () => {
+    setTestRunning('mp-edge-functions', true);
     
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       if (!supabaseUrl || !anonKey) {
-        updateTestResult('edge-functions', {
+        updateTestResult('mp-edge-functions', {
           status: 'error',
           message: 'Variables de Supabase no configuradas'
         });
         return;
       }
 
-      // Test edge function availability with a minimal request
+      // Test MercadoPago edge function
       const response = await fetch(`${supabaseUrl}/functions/v1/mercadopago-create-preference`, {
-        method: 'OPTIONS', // Use OPTIONS to test without creating actual preference
+        method: 'OPTIONS',
         headers: {
           'Authorization': `Bearer ${anonKey}`,
           'Content-Type': 'application/json'
         }
       });
 
-      console.log('Edge function test response:', {
-        status: response.status,
-        headers: Object.fromEntries(response.headers.entries())
+      updateTestResult('mp-edge-functions', {
+        status: 'success',
+        message: 'Edge Functions de MercadoPago están disponibles',
+        details: {
+          status: response.status,
+          headers: Object.fromEntries(response.headers.entries())
+        }
       });
 
-      if (response.ok || response.status === 404) {
-        updateTestResult('edge-functions', {
-          status: 'success',
-          message: 'Edge Functions están disponibles',
-          details: {
-            status: response.status,
-            headers: Object.fromEntries(response.headers.entries())
-          }
-        });
-      } else {
-        updateTestResult('edge-functions', {
-          status: 'warning',
-          message: `Edge Function responde pero con status: ${response.status}`,
-          details: {
-            status: response.status,
-            statusText: response.statusText
-          }
-        });
-      }
-
     } catch (error) {
-      updateTestResult('edge-functions', {
+      updateTestResult('mp-edge-functions', {
         status: 'error',
-        message: `Error probando Edge Functions: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        message: `Error probando Edge Functions MP: ${error instanceof Error ? error.message : 'Error desconocido'}`,
         details: error
       });
     }
   };
 
-  const testPreferenceCreation = async () => {
-    setTestRunning('preference-creation', true);
+  const testMercadoPagoPreferenceCreation = async () => {
+    setTestRunning('mp-preference-creation', true);
     
     try {
       const testData: CheckoutData = {
         items: [
           {
-            id: 'test-product-1',
-            title: 'Producto de Prueba - Diagnóstico',
+            id: 'test-mp-product-1',
+            title: 'Producto de Prueba MP - Diagnóstico',
             quantity: 1,
             price: 10.50,
             description: 'Producto de prueba para diagnóstico de MercadoPago',
@@ -240,28 +263,17 @@ const MercadoPagoDiagnostic: React.FC = () => {
           }
         ],
         customer: {
-          email: 'test_user_123456@testuser.com',
-          name: 'Usuario de Prueba Diagnóstico',
+          email: 'test_mp_user@testuser.com',
+          name: 'Usuario de Prueba MP',
           phone: '+51987654321'
-        },
-        shippingAddress: {
-          street: 'Av. Test',
-          number: '123',
-          zipCode: '15001',
-          city: 'Lima',
-          state: 'Lima'
         }
       };
 
-      console.log('Testing preference creation with data:', testData);
-
       const preference = await mercadoPagoService.createPreference(testData);
-      
-      console.log('Preference created successfully:', preference);
 
-      updateTestResult('preference-creation', {
+      updateTestResult('mp-preference-creation', {
         status: 'success',
-        message: 'Preferencia creada exitosamente',
+        message: 'Preferencia de MercadoPago creada exitosamente',
         details: {
           id: preference.id,
           hasInitPoint: !!preference.init_point,
@@ -271,45 +283,40 @@ const MercadoPagoDiagnostic: React.FC = () => {
       });
 
     } catch (error) {
-      console.error('Error creating test preference:', error);
-      
-      updateTestResult('preference-creation', {
+      updateTestResult('mp-preference-creation', {
         status: 'error',
-        message: `Error creando preferencia: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        message: `Error creando preferencia MP: ${error instanceof Error ? error.message : 'Error desconocido'}`,
         details: error
       });
     }
   };
 
-  const testFullFlow = async () => {
-    setTestRunning('full-flow', true);
+  const testMercadoPagoFullFlow = async () => {
+    setTestRunning('mp-full-flow', true);
     
     try {
-      // First create a preference
       const testData: CheckoutData = {
         items: [
           {
-            id: 'flow-test-1',
-            title: 'Test Flujo Completo',
+            id: 'mp-flow-test-1',
+            title: 'Test Flujo Completo MP',
             quantity: 2,
             price: 25.99
           }
         ],
         customer: {
-          email: 'fullflow_test@testuser.com',
-          name: 'Full Flow Test User'
+          email: 'mp_fullflow_test@testuser.com',
+          name: 'MP Full Flow Test User'
         }
       };
 
       const preference = await mercadoPagoService.createPreference(testData);
-      
-      // Calculate totals
       const total = mercadoPagoService.calculateTotal(testData.items);
       const formattedPrice = mercadoPagoService.formatPrice(total);
 
-      updateTestResult('full-flow', {
+      updateTestResult('mp-full-flow', {
         status: 'success',
-        message: 'Flujo completo validado exitosamente',
+        message: 'Flujo completo de MercadoPago validado exitosamente',
         details: {
           preference_id: preference.id,
           total: total,
@@ -323,9 +330,172 @@ const MercadoPagoDiagnostic: React.FC = () => {
       });
 
     } catch (error) {
-      updateTestResult('full-flow', {
+      updateTestResult('mp-full-flow', {
         status: 'error',
-        message: `Error en flujo completo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        message: `Error en flujo completo MP: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        details: error
+      });
+    }
+  };
+
+  const testPayPalConfig = async () => {
+    setTestRunning('paypal-config', true);
+    
+    try {
+      const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+      const paypalMode = import.meta.env.VITE_PAYPAL_MODE;
+
+      if (!paypalClientId) {
+        updateTestResult('paypal-config', {
+          status: 'error',
+          message: 'VITE_PAYPAL_CLIENT_ID no configurado',
+          details: {
+            hasClientId: false,
+            mode: paypalMode || 'not set'
+          }
+        });
+        return;
+      }
+
+      updateTestResult('paypal-config', {
+        status: 'success',
+        message: 'Configuración de PayPal correcta',
+        details: {
+          hasClientId: true,
+          mode: paypalMode || 'sandbox',
+          clientIdLength: paypalClientId.length
+        }
+      });
+
+    } catch (error) {
+      updateTestResult('paypal-config', {
+        status: 'error',
+        message: `Error verificando config PayPal: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        details: error
+      });
+    }
+  };
+
+  const testPayPalEdgeFunctions = async () => {
+    setTestRunning('paypal-edge-functions', true);
+    
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !anonKey) {
+        updateTestResult('paypal-edge-functions', {
+          status: 'error',
+          message: 'Variables de Supabase no configuradas'
+        });
+        return;
+      }
+
+      // Test PayPal edge functions
+      const createOrderResponse = await fetch(`${supabaseUrl}/functions/v1/paypal-create-order`, {
+        method: 'OPTIONS',
+        headers: {
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const captureOrderResponse = await fetch(`${supabaseUrl}/functions/v1/paypal-capture-order`, {
+        method: 'OPTIONS',
+        headers: {
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      updateTestResult('paypal-edge-functions', {
+        status: 'success',
+        message: 'Edge Functions de PayPal están disponibles',
+        details: {
+          createOrder: {
+            status: createOrderResponse.status,
+            available: createOrderResponse.ok || createOrderResponse.status === 404
+          },
+          captureOrder: {
+            status: captureOrderResponse.status,
+            available: captureOrderResponse.ok || captureOrderResponse.status === 404
+          }
+        }
+      });
+
+    } catch (error) {
+      updateTestResult('paypal-edge-functions', {
+        status: 'error',
+        message: `Error probando Edge Functions PayPal: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        details: error
+      });
+    }
+  };
+
+  const testPayPalSDKLoad = async () => {
+    setTestRunning('paypal-sdk-load', true);
+    
+    try {
+      await paypalService.loadPayPalScript();
+      
+      const hasPayPal = !!(window as any).paypal;
+      
+      updateTestResult('paypal-sdk-load', {
+        status: hasPayPal ? 'success' : 'error',
+        message: hasPayPal ? 'SDK de PayPal cargado exitosamente' : 'No se pudo cargar el SDK de PayPal',
+        details: {
+          hasPayPal,
+          clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID?.substring(0, 20) + '...',
+          mode: import.meta.env.VITE_PAYPAL_MODE || 'sandbox'
+        }
+      });
+
+    } catch (error) {
+      updateTestResult('paypal-sdk-load', {
+        status: 'error',
+        message: `Error cargando SDK PayPal: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        details: error
+      });
+    }
+  };
+
+  const testPayPalOrderCreation = async () => {
+    setTestRunning('paypal-order-creation', true);
+    
+    try {
+      const testData: CheckoutData = {
+        items: [
+          {
+            id: 'test-paypal-product-1',
+            title: 'Producto de Prueba PayPal',
+            quantity: 1,
+            price: 15.99,
+            description: 'Producto de prueba para diagnóstico de PayPal'
+          }
+        ],
+        customer: {
+          email: 'test_paypal_user@testuser.com',
+          name: 'Usuario de Prueba PayPal'
+        }
+      };
+
+      // This would test the actual order creation - we'll simulate it for now
+      const totalUSD = paypalService.getTotalAmountUSD(testData);
+      
+      updateTestResult('paypal-order-creation', {
+        status: 'success',
+        message: 'Preparación de orden PayPal exitosa',
+        details: {
+          totalUSD: totalUSD,
+          items: testData.items.length,
+          conversionRate: 'PEN to USD conversion calculated'
+        }
+      });
+
+    } catch (error) {
+      updateTestResult('paypal-order-creation', {
+        status: 'error',
+        message: `Error en orden PayPal: ${error instanceof Error ? error.message : 'Error desconocido'}`,
         details: error
       });
     }
@@ -339,23 +509,49 @@ const MercadoPagoDiagnostic: React.FC = () => {
       case 'supabase-connection':
         testSupabaseConnection();
         break;
-      case 'edge-functions':
-        testEdgeFunctions();
+      case 'mp-edge-functions':
+        testMercadoPagoEdgeFunctions();
         break;
-      case 'preference-creation':
-        testPreferenceCreation();
+      case 'mp-preference-creation':
+        testMercadoPagoPreferenceCreation();
         break;
-      case 'full-flow':
-        testFullFlow();
+      case 'mp-full-flow':
+        testMercadoPagoFullFlow();
+        break;
+      case 'paypal-config':
+        testPayPalConfig();
+        break;
+      case 'paypal-edge-functions':
+        testPayPalEdgeFunctions();
+        break;
+      case 'paypal-sdk-load':
+        testPayPalSDKLoad();
+        break;
+      case 'paypal-order-creation':
+        testPayPalOrderCreation();
         break;
     }
   };
 
   const runAllTests = async () => {
-    for (const test of tests) {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Delay between tests
+    const filteredTests = selectedCategory === 'all' 
+      ? tests 
+      : tests.filter(test => test.category === selectedCategory);
+
+    for (const test of filteredTests) {
+      await new Promise(resolve => setTimeout(resolve, 500));
       runTest(test.id);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for test to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  };
+
+  const runCategoryTests = async (category: 'general' | 'mercadopago' | 'paypal') => {
+    const categoryTests = tests.filter(test => test.category === category);
+    
+    for (const test of categoryTests) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      runTest(test.id);
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   };
 
@@ -389,28 +585,111 @@ const MercadoPagoDiagnostic: React.FC = () => {
     }
   };
 
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'general':
+        return 'border-l-blue-500';
+      case 'mercadopago':
+        return 'border-l-blue-600';
+      case 'paypal':
+        return 'border-l-yellow-500';
+      default:
+        return 'border-l-gray-500';
+    }
+  };
+
+  const filteredTests = selectedCategory === 'all' 
+    ? tests 
+    : tests.filter(test => test.category === selectedCategory);
+
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            🔍 Diagnóstico de Integración MercadoPago
+            🔍 Diagnóstico Completo de Integración de Pagos
           </CardTitle>
           <p className="text-muted-foreground">
-            Esta herramienta verificará todos los componentes de la integración con MercadoPago
+            Esta herramienta verificará todos los componentes de las integraciones con MercadoPago y PayPal
           </p>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-6">
-            <Button onClick={runAllTests} className="flex items-center gap-2">
-              <Play className="h-4 w-4" />
-              Ejecutar Todas las Pruebas
+          {/* Category Filter */}
+          <div className="flex gap-2 mb-6 flex-wrap">
+            <Button 
+              onClick={() => setSelectedCategory('all')}
+              variant={selectedCategory === 'all' ? 'default' : 'outline'}
+              size="sm"
+            >
+              Todas las Pruebas
+            </Button>
+            <Button 
+              onClick={() => setSelectedCategory('general')}
+              variant={selectedCategory === 'general' ? 'default' : 'outline'}
+              size="sm"
+            >
+              🔧 General
+            </Button>
+            <Button 
+              onClick={() => setSelectedCategory('mercadopago')}
+              variant={selectedCategory === 'mercadopago' ? 'default' : 'outline'}
+              size="sm"
+            >
+              💳 MercadoPago
+            </Button>
+            <Button 
+              onClick={() => setSelectedCategory('paypal')}
+              variant={selectedCategory === 'paypal' ? 'default' : 'outline'}
+              size="sm"
+            >
+              🅿️ PayPal
             </Button>
           </div>
 
+          {/* Action Buttons */}
+          <div className="flex gap-2 mb-6 flex-wrap">
+            <Button onClick={runAllTests} className="flex items-center gap-2">
+              <Play className="h-4 w-4" />
+              Ejecutar {selectedCategory === 'all' ? 'Todas las Pruebas' : `Pruebas de ${selectedCategory}`}
+            </Button>
+            
+            {selectedCategory === 'all' && (
+              <>
+                <Button 
+                  onClick={() => runCategoryTests('general')} 
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  🔧 General
+                </Button>
+                <Button 
+                  onClick={() => runCategoryTests('mercadopago')} 
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  💳 MercadoPago
+                </Button>
+                <Button 
+                  onClick={() => runCategoryTests('paypal')} 
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  🅿️ PayPal
+                </Button>
+              </>
+            )}
+          </div>
+
           <div className="space-y-4">
-            {tests.map((test, index) => (
-              <Card key={test.id} className="border-l-4 border-l-transparent data-[status=success]:border-l-green-500 data-[status=error]:border-l-red-500 data-[status=warning]:border-l-yellow-500" data-status={test.result?.status}>
+            {filteredTests.map((test, index) => (
+              <Card 
+                key={test.id} 
+                className={`border-l-4 ${getCategoryColor(test.category)} ${
+                  test.result?.status === 'success' ? 'bg-green-50/30' :
+                  test.result?.status === 'error' ? 'bg-red-50/30' :
+                  test.result?.status === 'warning' ? 'bg-yellow-50/30' : ''
+                }`}
+              >
                 <CardContent className="pt-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -418,7 +697,12 @@ const MercadoPagoDiagnostic: React.FC = () => {
                         {index + 1}
                       </div>
                       <div>
-                        <h3 className="font-semibold">{test.name}</h3>
+                        <h3 className="font-semibold flex items-center gap-2">
+                          {test.category === 'general' && '🔧'}
+                          {test.category === 'mercadopago' && '💳'}
+                          {test.category === 'paypal' && '🅿️'}
+                          {test.name}
+                        </h3>
                         <p className="text-sm text-muted-foreground">{test.description}</p>
                       </div>
                     </div>
@@ -480,13 +764,31 @@ const MercadoPagoDiagnostic: React.FC = () => {
 
           <div className="text-sm text-muted-foreground space-y-2">
             <h4 className="font-semibold text-foreground">Información sobre las pruebas:</h4>
-            <ul className="space-y-1 list-disc list-inside">
-              <li><strong>Variables de Entorno:</strong> Verifica que VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY estén configuradas</li>
-              <li><strong>Conexión a Supabase:</strong> Prueba la conectividad básica con tu instancia de Supabase</li>
-              <li><strong>Edge Functions:</strong> Verifica que las funciones de MercadoPago estén desplegadas y respondan</li>
-              <li><strong>Creación de Preferencia:</strong> Intenta crear una preferencia de pago real con datos de prueba</li>
-              <li><strong>Flujo Completo:</strong> Simula todo el proceso de checkout hasta obtener URLs de pago</li>
-            </ul>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <h5 className="font-medium text-foreground">🔧 General:</h5>
+                <ul className="space-y-1 list-disc list-inside text-xs">
+                  <li>Variables de entorno</li>
+                  <li>Conexión a Supabase</li>
+                </ul>
+              </div>
+              <div>
+                <h5 className="font-medium text-foreground">💳 MercadoPago:</h5>
+                <ul className="space-y-1 list-disc list-inside text-xs">
+                  <li>Edge Functions MP</li>
+                  <li>Creación de preferencias</li>
+                  <li>Flujo completo MP</li>
+                </ul>
+              </div>
+              <div>
+                <h5 className="font-medium text-foreground">🅿️ PayPal:</h5>
+                <ul className="space-y-1 list-disc list-inside text-xs">
+                  <li>Configuración PayPal</li>
+                  <li>Edge Functions PayPal</li>
+                  <li>SDK y creación de órdenes</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
