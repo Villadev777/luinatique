@@ -201,3 +201,142 @@ All colors MUST be HSL.
   position: relative;
   z-index: 0;
 }
+
+/* Mobile Navigation Improvements */
+@media (max-width: 768px) {
+  /* Ensure proper stacking and scrolling */
+  .mobile-menu-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+
+  /* Mobile menu animations */
+  .mobile-menu-item {
+    animation: mobile-slide-in 0.3s ease-out;
+  }
+
+  @keyframes mobile-slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Improved touch targets */
+  .mobile-nav-link {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Category expansion animation */
+  .category-expanded {
+    animation: category-expand 0.3s ease-out;
+  }
+
+  @keyframes category-expand {
+    from {
+      max-height: 0;
+      opacity: 0;
+    }
+    to {
+      max-height: 500px;
+      opacity: 1;
+    }
+  }
+
+  /* Improved mobile header */
+  .mobile-header {
+    position: sticky;
+    top: 0;
+    background: var(--background);
+    z-index: 40;
+  }
+}
+
+/* Tablet responsive improvements */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .navigation-menu {
+    padding: 0 1rem;
+  }
+  
+  .mega-menu-content {
+    max-width: 90vw;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 375px) {
+  .brand-logo {
+    font-size: 1.25rem;
+  }
+  
+  .mobile-menu-item {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 896px) and (orientation: landscape) {
+  .mobile-menu-container {
+    max-height: 80vh;
+  }
+  
+  .announcement-bar {
+    display: none; /* Hide announcement bar in landscape to save space */
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .brand-logo {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-menu-item,
+  .category-expanded {
+    animation: none;
+  }
+}
+
+/* Focus improvements for mobile */
+@media (max-width: 768px) {
+  .mobile-nav-link:focus,
+  .category-toggle:focus {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+}
+
+/* Cart button mobile improvements */
+@media (max-width: 640px) {
+  .cart-button {
+    padding: 0.5rem;
+  }
+  
+  .cart-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+/* Search input mobile improvements */
+@media (max-width: 640px) {
+  .mobile-search-input {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+}
