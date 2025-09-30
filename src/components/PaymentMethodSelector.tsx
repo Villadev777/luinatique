@@ -173,16 +173,24 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     try {
       const preference = await mercadoPagoService.createPreference(checkoutData);
       
+      console.log('✅ Preference created, redirecting to checkout:', preference);
+      
       toast({
         title: "Redirigiendo a MercadoPago",
         description: "Serás redirigido para completar tu pago.",
       });
       
+      // 🔥 FIX: SIEMPRE redirigir al checkout de MercadoPago
+      // Llamar onSuccess ANTES de redirigir si existe
       if (onSuccess) {
         onSuccess({ preference_id: preference.id, method: 'mercadopago' });
-      } else {
-        mercadoPagoService.redirectToCheckout(preference);
       }
+      
+      // Redirigir después de un breve delay para que se vea el toast
+      setTimeout(() => {
+        mercadoPagoService.redirectToCheckout(preference);
+      }, 500);
+      
     } catch (error) {
       console.error('MercadoPago error:', error);
       const errorMessage = "Hubo un problema con MercadoPago. Por favor intenta con PayPal.";
