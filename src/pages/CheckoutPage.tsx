@@ -30,15 +30,36 @@ const CheckoutPage: React.FC = () => {
     }));
   };
 
-  const handlePaymentSuccess = (preferenceId: string) => {
-    console.log('Payment initiated with preference:', preferenceId);
-    // Guardamos la referencia del pago para limpiar el carrito después del pago exitoso
-    sessionStorage.setItem('pending_payment_preference', preferenceId);
+  const handlePaymentSuccess = (details: any) => {
+    console.log('💳 Payment success:', details);
+    
+    // Detectar el método de pago y redirigir apropiadamente
+    if (details.method === 'paypal') {
+      // PayPal - Limpiar carrito y redirigir a página de éxito
+      console.log('✅ PayPal payment completed');
+      clearCart();
+      navigate('/payment/success', {
+        state: {
+          paymentDetails: details,
+          method: 'paypal'
+        }
+      });
+    } else if (details.method === 'mercadopago' || details.preference_id) {
+      // MercadoPago - Solo guardar referencia (la redirección la maneja MercadoPago)
+      console.log('🔗 MercadoPago preference created:', details.preference_id);
+      sessionStorage.setItem('pending_payment_preference', details.preference_id || details.id);
+      // NO redirigir aquí - MercadoPago redirige automáticamente
+    }
   };
 
   const handlePaymentError = (error: string) => {
-    console.error('Payment error:', error);
-    // Aquí puedes agregar lógica para manejar errores
+    console.error('❌ Payment error:', error);
+    navigate('/payment/failure', {
+      state: {
+        error: error,
+        timestamp: new Date().toISOString()
+      }
+    });
   };
 
   if (cartState.items.length === 0) {
