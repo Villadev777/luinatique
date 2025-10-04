@@ -43,6 +43,30 @@ Deno.serve(async (req: Request) => {
     const isTestToken = accessToken.startsWith('TEST-');
     console.log('🔑 Access token type:', isTestToken ? 'TEST (Sandbox)' : 'PRODUCTION');
     console.log('✅ Access token encontrado:', accessToken.substring(0, 20) + '...');
+    
+    // 🆕 OBTENER USER ID DEL TOKEN
+    try {
+      const userInfoResponse = await fetch('https://api.mercadopago.com/users/me', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (userInfoResponse.ok) {
+        const userInfo = await userInfoResponse.json();
+        console.log('👤 USER INFO FROM TOKEN:', {
+          id: userInfo.id,
+          nickname: userInfo.nickname,
+          email: userInfo.email,
+          site_id: userInfo.site_id
+        });
+        console.log('🔑 Este token pertenece al User ID:', userInfo.id);
+      } else {
+        console.error('⚠️ No se pudo obtener info del usuario');
+      }
+    } catch (err) {
+      console.error('⚠️ Error obteniendo user info:', err);
+    }
 
     // Parse request body
     const preferenceData = await req.json();
@@ -104,9 +128,9 @@ Deno.serve(async (req: Request) => {
     const preferencePayload = {
       items: preferenceData.items.map((item: any) => ({
         id: String(item.id || crypto.randomUUID()),
-        title: String(item.title).substring(0, 256), // MercadoPago limita a 256 caracteres
+        title: String(item.title).substring(0, 256),
         quantity: Number(item.quantity),
-        currency_id: 'PEN', // SIEMPRE PEN para Perú
+        currency_id: 'PEN',
         unit_price: Number(item.unit_price),
         description: item.description ? String(item.description).substring(0, 256) : undefined,
         picture_url: item.picture_url,
@@ -180,8 +204,7 @@ Deno.serve(async (req: Request) => {
     console.log('📥 MercadoPago API Response:', {
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      body: responseText.substring(0, 500) // Limitar el log
+      body: responseText.substring(0, 500)
     });
 
     if (!response.ok) {
@@ -214,11 +237,18 @@ Deno.serve(async (req: Request) => {
     }
 
     const result = JSON.parse(responseText);
+    
+    // 🆕 EXTRAER USER ID DE LA PREFERENCIA
+    const preferenceUserId = result.id.split('-')[0];
+    
     console.log('✅ Preferencia creada exitosamente:', {
       id: result.id,
+      preference_user_id: preferenceUserId,
       init_point: result.init_point,
       sandbox_init_point: result.sandbox_init_point,
     });
+    
+    console.log('🔍 VERIFICACIÓN: La preferencia fue creada con el User ID:', preferenceUserId);
 
     // Return only the necessary data
     return new Response(
@@ -229,6 +259,11 @@ Deno.serve(async (req: Request) => {
         public_key: result.public_key,
         external_reference: result.external_reference,
         date_created: result.date_created,
+        // 🆕 Agregar info de debug
+        _debug: {
+          preference_user_id: preferenceUserId,
+          test_mode: isTestToken
+        }
       }),
       { 
         status: 200, 
@@ -239,7 +274,6 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error('❌ Error creating MercadoPago preference:', error);
     
-    // Log detailed error information
     console.error('Error details:', {
       name: error.name,
       message: error.message,
