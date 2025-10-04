@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Table,
@@ -12,13 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Shield, ShieldCheck, Trash2 } from 'lucide-react';
+import { Shield, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserProfile {
@@ -41,9 +33,6 @@ interface UserProfile {
   last_name: string | null;
   avatar_url: string | null;
   created_at: string;
-  user_roles?: {
-    role: 'admin' | 'user';
-  }[];
 }
 
 export const UserManagement = () => {
@@ -53,16 +42,16 @@ export const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
+      console.log('👥 Fetching users...');
+      
+      // Query simplificada - solo perfiles
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles(role)
-        `)
+        .select('id, user_id, display_name, first_name, last_name, avatar_url, created_at')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching users:', error);
+        console.error('❌ Error fetching users:', error);
         toast({
           title: "Error",
           description: "Failed to fetch users",
@@ -71,9 +60,10 @@ export const UserManagement = () => {
         return;
       }
 
+      console.log('✅ Users fetched:', data?.length || 0);
       setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('❌ Error fetching users:', error);
     } finally {
       setLoading(false);
     }
@@ -83,55 +73,9 @@ export const UserManagement = () => {
     fetchUsers();
   }, []);
 
-  const getUserRole = (user: UserProfile): 'admin' | 'user' => {
-    return user.user_roles?.[0]?.role || 'user';
-  };
-
-  const handleRoleChange = async (userId: string, newRole: 'admin' | 'user') => {
-    try {
-      // First, remove existing role
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-
-      // Then add new role
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: newRole
-        });
-
-      if (error) {
-        console.error('Error updating user role:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update user role",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Success",
-        description: `User role updated to ${newRole}`,
-      });
-
-      fetchUsers();
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user role",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleDeleteUser = async (userId: string) => {
     try {
-      // Delete user profile (this will cascade to user_roles due to foreign key)
+      // Delete user profile
       const { error } = await supabase
         .from('profiles')
         .delete()
@@ -164,7 +108,11 @@ export const UserManagement = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const getInitials = (user: UserProfile) => {
@@ -175,6 +123,15 @@ export const UserManagement = () => {
       return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
     }
     return 'U';
+  };
+
+  const getDisplayName = (user: UserProfile) => {
+    if (user.display_name) return user.display_name;
+    if (user.first_name && user.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    if (user.first_name) return user.first_name;
+    return 'Unknown User';
   };
 
   if (loading) {
@@ -198,7 +155,7 @@ export const UserManagement = () => {
       <CardHeader>
         <CardTitle>User Management</CardTitle>
         <CardDescription>
-          Manage user accounts and roles ({users.length} total users)
+          Manage user accounts ({users.length} total users)
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -212,7 +169,7 @@ export const UserManagement = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -228,7 +185,7 @@ export const UserManagement = () => {
                         </Avatar>
                         <div>
                           <div className="font-medium">
-                            {user.display_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User'}
+                            {getDisplayName(user)}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             ID: {user.user_id.substring(0, 8)}...
@@ -238,23 +195,10 @@ export const UserManagement = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getUserRole(user) === 'admin' ? (
-                          <ShieldCheck className="h-4 w-4 text-primary" />
-                        ) : (
-                          <Shield className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <Select
-                          value={getUserRole(user)}
-                          onValueChange={(value: 'admin' | 'user') => handleRoleChange(user.user_id, value)}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Shield className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          User
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>{formatDate(user.created_at)}</TableCell>
