@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -22,7 +23,16 @@ Deno.serve(async (req: Request) => {
     console.log('📝 Creating order from frontend:', { paymentDetails, cartItems });
 
     if (!paymentDetails || !cartItems || !customerInfo) {
-      throw new Error('Missing required data: paymentDetails, cartItems, or customerInfo');
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Missing required data: paymentDetails, cartItems, or customerInfo'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     const paymentId = paymentDetails.id;
@@ -43,7 +53,10 @@ Deno.serve(async (req: Request) => {
           message: 'Order already exists',
           order_id: existingOrder.id
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { 
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
@@ -93,7 +106,17 @@ Deno.serve(async (req: Request) => {
 
     if (orderError) {
       console.error('❌ Error creating order:', orderError);
-      throw orderError;
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: orderError.message,
+          details: orderError
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     console.log('✅ Order created:', newOrder);
@@ -119,7 +142,17 @@ Deno.serve(async (req: Request) => {
 
     if (itemsError) {
       console.error('❌ Error creating order items:', itemsError);
-      throw itemsError;
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: itemsError.message,
+          details: itemsError
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     console.log('✅ Order items created');
@@ -132,8 +165,8 @@ Deno.serve(async (req: Request) => {
         message: 'Order created successfully'
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
     
@@ -147,8 +180,8 @@ Deno.serve(async (req: Request) => {
         details: error instanceof Error ? error.stack : 'No additional details'
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
