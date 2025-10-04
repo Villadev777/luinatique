@@ -116,6 +116,40 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     loadPayPal();
   }, [toast]);
 
+  // Helper function to create order in database
+  const createOrderInDatabase = async (paymentDetails: any, method: 'paypal' | 'mercadopago') => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          paymentDetails: {
+            ...paymentDetails,
+            method
+          },
+          cartItems: state.items,
+          customerInfo: checkoutData.customer,
+          shippingAddress: checkoutData.shippingAddress,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create order');
+      }
+
+      const result = await response.json();
+      console.log('✅ Order created in database:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Error creating order:', error);
+      throw error;
+    }
+  };
+
   // Render PayPal buttons when PayPal is selected and loaded
   useEffect(() => {
     if (selectedMethod === 'paypal' && paypalLoaded && window.paypal && !isProcessing) {
@@ -124,22 +158,36 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         
         const buttonsConfig = paypalService.createButtonsConfig(
           checkoutData,
-          (details: PayPalCaptureResponse) => {
-            console.log('PayPal payment success:', details);
-            toast({
-              title: "¡Pago exitoso!",
-              description: `Pago procesado correctamente. ID: ${details.id}`,
-            });
-            clearCart();
+          async (details: PayPalCaptureResponse) => {
+            console.log('💳 PayPal payment success:', details);
             
-            if (onSuccess) {
-              onSuccess(details);
-            } else {
-              navigate('/payment/success', { 
-                state: { 
-                  paymentDetails: details,
-                  method: 'paypal' 
-                } 
+            try {
+              // Guardar la orden en la base de datos PRIMERO
+              await createOrderInDatabase(details, 'paypal');
+              
+              toast({
+                title: "¡Pago exitoso!",
+                description: `Pago procesado correctamente. ID: ${details.id}`,
+              });
+              
+              clearCart();
+              
+              if (onSuccess) {
+                onSuccess({ ...details, method: 'paypal' });
+              } else {
+                navigate('/payment/success', { 
+                  state: { 
+                    paymentDetails: details,
+                    method: 'paypal' 
+                  } 
+                });
+              }
+            } catch (error) {
+              console.error('Error al guardar la orden:', error);
+              toast({
+                title: "Advertencia",
+                description: "El pago se procesó pero hubo un problema al guardar la orden. Contacta al soporte.",
+                variant: "destructive",
               });
             }
           },
@@ -166,7 +214,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         }
       }
     }
-  }, [selectedMethod, paypalLoaded, isProcessing, checkoutData, toast, clearCart, navigate, onSuccess, onError]);
+  }, [selectedMethod, paypalLoaded, isProcessing, checkoutData, toast, clearCart, navigate, onSuccess, onError, state.items]);
 
   const handleMercadoPagoPayment = async () => {
     console.log('🎯 handleMercadoPagoPayment - START');
@@ -179,13 +227,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       const preference = await mercadoPagoService.createPreference(checkoutData);
       
       console.log('✅ Preference created successfully:', preference);
-      console.log('🔗 Preference details:', {
-        id: preference.id,
-        init_point: preference.init_point,
-        sandbox_init_point: preference.sandbox_init_point,
-        hasInitPoint: !!preference.init_point,
-        hasSandboxPoint: !!preference.sandbox_init_point
-      });
       
       toast({
         title: "Redirigiendo a MercadoPago",
@@ -198,32 +239,18 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         onSuccess({ preference_id: preference.id, method: 'mercadopago' });
       }
       
-      // Redirigir después de un breve delay
-      console.log('⏳ Waiting 500ms before redirect...');
-      setTimeout(() => {
-        console.log('🚀 About to redirect to checkout...');
-        console.log('🔗 Using redirectToCheckout with preference:', {
-          id: preference.id,
-          sandbox_init_point: preference.sandbox_init_point,
-          init_point: preference.init_point
-        });
-        
-        try {
-          mercadoPagoService.redirectToCheckout(preference);
-          console.log('✅ redirectToCheckout called successfully');
-        } catch (redirectError) {
-          console.error('❌ Error in redirectToCheckout:', redirectError);
-          throw redirectError;
-        }
-      }, 500);
+      // Redirigir inmediatamente
+      const checkoutUrl = preference.sandbox_init_point || preference.init_point;
+      
+      if (!checkoutUrl) {
+        throw new Error('No se recibió URL de checkout de MercadoPago');
+      }
+      
+      console.log('🚀 Redirecting to:', checkoutUrl);
+      window.location.href = checkoutUrl;
       
     } catch (error) {
       console.error('❌ MercadoPago error:', error);
-      console.error('❌ Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
       
       const errorMessage = error instanceof Error ? error.message : "Hubo un problema con MercadoPago.";
       toast({
