@@ -27,6 +27,13 @@ export const createOrder = async ({
     const paymentId = paymentDetails.id;
     const method = paymentDetails.method || 'paypal';
 
+    console.log('Creating order with data:', {
+      paymentId,
+      method,
+      itemsCount: cartItems.length,
+      customerEmail: customerInfo.email
+    });
+
     // Verificar si ya existe una orden
     const { data: existingOrder } = await supabase
       .from('orders')
@@ -85,6 +92,8 @@ export const createOrder = async ({
       paid_at: new Date().toISOString(),
     };
 
+    console.log('Inserting order:', orderData);
+
     const { data: newOrder, error: orderError } = await supabase
       .from('orders')
       .insert([orderData])
@@ -98,31 +107,36 @@ export const createOrder = async ({
 
     console.log('✅ Order created:', newOrder);
 
-    // Crear order items
-    const orderItems = cartItems.map((item) => ({
-      order_id: newOrder.id,
-      product_id: item.id,
-      product_name: item.title || item.name,
-      product_image: item.image,
-      product_sku: item.id,
-      selected_size: item.selectedSize || null,
-      selected_material: item.selectedMaterial || null,
-      selected_color: item.selectedColor || null,
-      unit_price: item.price,
-      quantity: item.quantity,
-      subtotal: item.price * item.quantity,
-    }));
+    // Crear order items uno por uno para mejor debugging
+    for (const item of cartItems) {
+      const orderItem = {
+        order_id: newOrder.id,
+        product_id: item.id,
+        product_name: item.title || item.name,
+        product_image: item.image || null,
+        product_sku: item.id,
+        selected_size: item.selectedSize || null,
+        selected_material: item.selectedMaterial || null,
+        selected_color: item.selectedColor || null,
+        unit_price: parseFloat(item.price),
+        quantity: parseInt(item.quantity),
+        subtotal: parseFloat(item.price) * parseInt(item.quantity),
+      };
 
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems);
+      console.log('Inserting order item:', orderItem);
 
-    if (itemsError) {
-      console.error('❌ Error creating order items:', itemsError);
-      throw itemsError;
+      const { error: itemError } = await supabase
+        .from('order_items')
+        .insert([orderItem]);
+
+      if (itemError) {
+        console.error('❌ Error creating order item:', itemError);
+        console.error('Failed item data:', orderItem);
+        // Continuar con los demás items aunque uno falle
+      } else {
+        console.log('✅ Order item created for product:', item.id);
+      }
     }
-
-    console.log('✅ Order items created');
 
     return {
       success: true,
