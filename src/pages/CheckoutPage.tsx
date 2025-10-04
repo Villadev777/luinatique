@@ -39,27 +39,37 @@ const CheckoutPage: React.FC = () => {
     
     // Detectar el método de pago y redirigir apropiadamente
     if (details.method === 'paypal') {
-      // PayPal - Redirigir primero, luego limpiar carrito
+      // PayPal payment success
       console.log('✅ PayPal payment completed');
       
-      // Guardar datos en sessionStorage para la página de éxito
-      sessionStorage.setItem('payment_success_data', JSON.stringify({
+      // Guardar datos en MÚLTIPLES lugares para máxima compatibilidad
+      const paymentData = {
         paymentDetails: details,
         method: 'paypal',
         timestamp: new Date().toISOString()
-      }));
+      };
       
-      // Limpiar carrito
+      // 1. Guardar en sessionStorage (backup si falla la navegación)
+      try {
+        sessionStorage.setItem('payment_success_data', JSON.stringify(paymentData));
+        console.log('✅ Payment data saved to sessionStorage');
+      } catch (error) {
+        console.error('❌ Failed to save to sessionStorage:', error);
+      }
+      
+      // 2. Limpiar carrito DESPUÉS de guardar los datos
       clearCart();
+      console.log('✅ Cart cleared');
       
-      // Redirigir inmediatamente
-      navigate('/payment/success', {
-        replace: true,
-        state: {
-          paymentDetails: details,
-          method: 'paypal'
-        }
-      });
+      // 3. Redirigir con datos en el estado (método principal)
+      setTimeout(() => {
+        console.log('🔄 Redirecting to success page...');
+        navigate('/payment/success', {
+          replace: true,
+          state: paymentData
+        });
+      }, 100); // Pequeño delay para asegurar que sessionStorage se guarde
+      
     } else if (details.method === 'mercadopago' || details.preference_id) {
       // MercadoPago - Solo guardar referencia (la redirección la maneja MercadoPago)
       console.log('🔗 MercadoPago preference created:', details.preference_id);
@@ -71,6 +81,13 @@ const CheckoutPage: React.FC = () => {
   const handlePaymentError = (error: string) => {
     console.error('❌ Payment error:', error);
     setIsProcessingPayment(true);
+    
+    // Guardar error en sessionStorage
+    sessionStorage.setItem('payment_error_data', JSON.stringify({
+      error: error,
+      timestamp: new Date().toISOString()
+    }));
+    
     navigate('/payment/failure', {
       replace: true,
       state: {
