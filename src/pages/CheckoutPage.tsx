@@ -10,13 +10,14 @@ import { ArrowLeft, ShoppingCart } from 'lucide-react';
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const { state: cartState, clearCart } = useCart();
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
-    // Si no hay items en el carrito, redirigir a la tienda
-    if (cartState.items.length === 0) {
+    // Si no hay items en el carrito Y NO estamos procesando un pago, redirigir a la tienda
+    if (cartState.items.length === 0 && !isProcessingPayment) {
       navigate('/shop');
     }
-  }, [cartState.items, navigate]);
+  }, [cartState.items, navigate, isProcessingPayment]);
 
   // Convertir items del carrito al formato de MercadoPago
   const convertCartItems = (): MercadoPagoCartItem[] => {
@@ -33,12 +34,27 @@ const CheckoutPage: React.FC = () => {
   const handlePaymentSuccess = (details: any) => {
     console.log('💳 Payment success:', details);
     
+    // Marcar que estamos procesando el pago para evitar redirección a /shop
+    setIsProcessingPayment(true);
+    
     // Detectar el método de pago y redirigir apropiadamente
     if (details.method === 'paypal') {
-      // PayPal - Limpiar carrito y redirigir a página de éxito
+      // PayPal - Redirigir primero, luego limpiar carrito
       console.log('✅ PayPal payment completed');
+      
+      // Guardar datos en sessionStorage para la página de éxito
+      sessionStorage.setItem('payment_success_data', JSON.stringify({
+        paymentDetails: details,
+        method: 'paypal',
+        timestamp: new Date().toISOString()
+      }));
+      
+      // Limpiar carrito
       clearCart();
+      
+      // Redirigir inmediatamente
       navigate('/payment/success', {
+        replace: true,
         state: {
           paymentDetails: details,
           method: 'paypal'
@@ -54,7 +70,9 @@ const CheckoutPage: React.FC = () => {
 
   const handlePaymentError = (error: string) => {
     console.error('❌ Payment error:', error);
+    setIsProcessingPayment(true);
     navigate('/payment/failure', {
+      replace: true,
       state: {
         error: error,
         timestamp: new Date().toISOString()
@@ -62,7 +80,7 @@ const CheckoutPage: React.FC = () => {
     });
   };
 
-  if (cartState.items.length === 0) {
+  if (cartState.items.length === 0 && !isProcessingPayment) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
