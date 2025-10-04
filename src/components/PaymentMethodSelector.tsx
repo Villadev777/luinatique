@@ -169,31 +169,63 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   }, [selectedMethod, paypalLoaded, isProcessing, checkoutData, toast, clearCart, navigate, onSuccess, onError]);
 
   const handleMercadoPagoPayment = async () => {
+    console.log('🎯 handleMercadoPagoPayment - START');
+    console.log('📦 Checkout data:', checkoutData);
+    
     setIsProcessing(true);
+    
     try {
+      console.log('🚀 Creating MercadoPago preference...');
       const preference = await mercadoPagoService.createPreference(checkoutData);
       
-      console.log('✅ Preference created, redirecting to checkout:', preference);
+      console.log('✅ Preference created successfully:', preference);
+      console.log('🔗 Preference details:', {
+        id: preference.id,
+        init_point: preference.init_point,
+        sandbox_init_point: preference.sandbox_init_point,
+        hasInitPoint: !!preference.init_point,
+        hasSandboxPoint: !!preference.sandbox_init_point
+      });
       
       toast({
         title: "Redirigiendo a MercadoPago",
         description: "Serás redirigido para completar tu pago.",
       });
       
-      // 🔥 FIX: SIEMPRE redirigir al checkout de MercadoPago
       // Llamar onSuccess ANTES de redirigir si existe
       if (onSuccess) {
+        console.log('📞 Calling onSuccess callback');
         onSuccess({ preference_id: preference.id, method: 'mercadopago' });
       }
       
-      // Redirigir después de un breve delay para que se vea el toast
+      // Redirigir después de un breve delay
+      console.log('⏳ Waiting 500ms before redirect...');
       setTimeout(() => {
-        mercadoPagoService.redirectToCheckout(preference);
+        console.log('🚀 About to redirect to checkout...');
+        console.log('🔗 Using redirectToCheckout with preference:', {
+          id: preference.id,
+          sandbox_init_point: preference.sandbox_init_point,
+          init_point: preference.init_point
+        });
+        
+        try {
+          mercadoPagoService.redirectToCheckout(preference);
+          console.log('✅ redirectToCheckout called successfully');
+        } catch (redirectError) {
+          console.error('❌ Error in redirectToCheckout:', redirectError);
+          throw redirectError;
+        }
       }, 500);
       
     } catch (error) {
-      console.error('MercadoPago error:', error);
-      const errorMessage = "Hubo un problema con MercadoPago. Por favor intenta con PayPal.";
+      console.error('❌ MercadoPago error:', error);
+      console.error('❌ Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      const errorMessage = error instanceof Error ? error.message : "Hubo un problema con MercadoPago.";
       toast({
         title: "Error",
         description: errorMessage,
