@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { useToast } from '../hooks/use-toast';
 import { paypalService } from '../lib/paypal';
 import { mercadoPagoService } from '../lib/mercadopago';
+import { createOrder } from '../lib/orders';
 import { CheckoutData } from '../types/mercadopago';
 import { PayPalCaptureResponse } from '../types/paypal';
 import { 
@@ -50,7 +51,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [paypalLoaded, setPaypalLoaded] = useState(false);
 
-  // Use provided checkout data or create from cart
   const checkoutData: CheckoutData = providedCheckoutData || {
     items: state.items.map(item => ({
       id: item.id,
@@ -97,7 +97,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     },
   ];
 
-  // Load PayPal SDK when component mounts
   useEffect(() => {
     const loadPayPal = async () => {
       try {
@@ -116,41 +115,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     loadPayPal();
   }, [toast]);
 
-  // Helper function to create order in database
-  const createOrderInDatabase = async (paymentDetails: any, method: 'paypal' | 'mercadopago') => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          paymentDetails: {
-            ...paymentDetails,
-            method
-          },
-          cartItems: state.items,
-          customerInfo: checkoutData.customer,
-          shippingAddress: checkoutData.shippingAddress,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create order');
-      }
-
-      const result = await response.json();
-      console.log('✅ Order created in database:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Error creating order:', error);
-      throw error;
-    }
-  };
-
-  // Render PayPal buttons when PayPal is selected and loaded
   useEffect(() => {
     if (selectedMethod === 'paypal' && paypalLoaded && window.paypal && !isProcessing) {
       const paypalButtonsContainer = document.getElementById('paypal-buttons');
@@ -162,8 +126,17 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             console.log('💳 PayPal payment success:', details);
             
             try {
-              // Guardar la orden en la base de datos PRIMERO
-              await createOrderInDatabase(details, 'paypal');
+              console.log('📝 Saving order to database...');
+              
+              // Guardar orden directamente en Supabase
+              await createOrder({
+                paymentDetails: { ...details, method: 'paypal' },
+                cartItems: state.items,
+                customerInfo: checkoutData.customer,
+                shippingAddress: checkoutData.shippingAddress,
+              });
+              
+              console.log('✅ Order saved successfully');
               
               toast({
                 title: "¡Pago exitoso!",
@@ -183,7 +156,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 });
               }
             } catch (error) {
-              console.error('Error al guardar la orden:', error);
+              console.error('❌ Error saving order:', error);
               toast({
                 title: "Advertencia",
                 description: "El pago se procesó pero hubo un problema al guardar la orden. Contacta al soporte.",
@@ -218,35 +191,27 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
   const handleMercadoPagoPayment = async () => {
     console.log('🎯 handleMercadoPagoPayment - START');
-    console.log('📦 Checkout data:', checkoutData);
     
     setIsProcessing(true);
     
     try {
-      console.log('🚀 Creating MercadoPago preference...');
       const preference = await mercadoPagoService.createPreference(checkoutData);
-      
-      console.log('✅ Preference created successfully:', preference);
       
       toast({
         title: "Redirigiendo a MercadoPago",
         description: "Serás redirigido para completar tu pago.",
       });
       
-      // Llamar onSuccess ANTES de redirigir si existe
       if (onSuccess) {
-        console.log('📞 Calling onSuccess callback');
         onSuccess({ preference_id: preference.id, method: 'mercadopago' });
       }
       
-      // Redirigir inmediatamente
       const checkoutUrl = preference.sandbox_init_point || preference.init_point;
       
       if (!checkoutUrl) {
         throw new Error('No se recibió URL de checkout de MercadoPago');
       }
       
-      console.log('🚀 Redirecting to:', checkoutUrl);
       window.location.href = checkoutUrl;
       
     } catch (error) {
@@ -301,7 +266,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Payment Methods */}
         <div className="space-y-4">
           {paymentMethods.map((method) => (
             <Card 
@@ -354,7 +318,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           ))}
         </div>
 
-        {/* Order Summary & Payment Button */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -404,7 +367,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             </CardContent>
           </Card>
 
-          {/* Payment Action */}
           <Card>
             <CardContent className="pt-6">
               {!selectedMethod ? (
