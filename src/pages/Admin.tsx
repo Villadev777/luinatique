@@ -7,10 +7,10 @@ import Footer from '@/components/Footer';
 import { ProductManagement } from '@/components/admin/ProductManagement';
 import { CategoryManagement } from '@/components/admin/CategoryManagement';
 import { UserManagement } from '@/components/admin/UserManagement';
+import { OrderManagement } from '@/components/admin/OrderManagement';
 import { Analytics } from '@/components/admin/Analytics';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, FolderOpen, Users, BarChart3 } from 'lucide-react';
+import { Package, FolderOpen, Users, BarChart3, ShoppingCart } from 'lucide-react';
 
 const Admin = () => {
   const { user, loading: authLoading } = useAuth();
@@ -58,8 +58,16 @@ const Admin = () => {
           <p className="text-muted-foreground">Manage your jewelry store</p>
         </div>
 
-        <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Orders
+            </TabsTrigger>
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Products
@@ -72,11 +80,15 @@ const Admin = () => {
               <Users className="h-4 w-4" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="analytics">
+            <Analytics />
+          </TabsContent>
+
+          <TabsContent value="orders">
+            <OrderManagement />
+          </TabsContent>
 
           <TabsContent value="products">
             <ProductManagement />
@@ -88,10 +100,6 @@ const Admin = () => {
 
           <TabsContent value="users">
             <UserManagement />
-          </TabsContent>
-
-          <TabsContent value="analytics">
-            <Analytics />
           </TabsContent>
         </Tabs>
       </main>
