@@ -39,6 +39,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Verificar que sea un token TEST
+    const isTestToken = accessToken.startsWith('TEST-');
+    console.log('🔑 Access token type:', isTestToken ? 'TEST (Sandbox)' : 'PRODUCTION');
     console.log('✅ Access token encontrado:', accessToken.substring(0, 20) + '...');
 
     // Parse request body
@@ -56,6 +59,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Validar cada item
+    for (const item of preferenceData.items) {
+      if (!item.title || item.title.trim() === '') {
+        return new Response(
+          JSON.stringify({ error: 'Item title is required and cannot be empty' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!item.unit_price || item.unit_price <= 0) {
+        return new Response(
+          JSON.stringify({ error: `Item "${item.title}" must have a price greater than 0` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        return new Response(
+          JSON.stringify({ error: `Item "${item.title}" must have a quantity greater than 0` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     if (!preferenceData.payer || !preferenceData.payer.email) {
       return new Response(
         JSON.stringify({ error: 'Payer email is required' }),
@@ -66,46 +91,73 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(preferenceData.payer.email)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Prepare preference data for MercadoPago API
     const preferencePayload = {
       items: preferenceData.items.map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        quantity: item.quantity,
-        currency_id: item.currency_id || 'PEN',
-        unit_price: item.unit_price,
-        description: item.description,
+        id: String(item.id || crypto.randomUUID()),
+        title: String(item.title).substring(0, 256), // MercadoPago limita a 256 caracteres
+        quantity: Number(item.quantity),
+        currency_id: 'PEN', // SIEMPRE PEN para Perú
+        unit_price: Number(item.unit_price),
+        description: item.description ? String(item.description).substring(0, 256) : undefined,
         picture_url: item.picture_url,
       })),
       payer: {
         email: preferenceData.payer.email,
-        name: preferenceData.payer.name,
-        ...(preferenceData.payer.phone && { phone: preferenceData.payer.phone }),
-        ...(preferenceData.payer.address && { address: preferenceData.payer.address }),
+        name: preferenceData.payer.name || 'Usuario',
+        ...(preferenceData.payer.phone && { 
+          phone: {
+            area_code: '',
+            number: String(preferenceData.payer.phone.number || preferenceData.payer.phone)
+          }
+        }),
+        ...(preferenceData.payer.address && { 
+          address: {
+            street_name: preferenceData.payer.address.street_name,
+            street_number: Number(preferenceData.payer.address.street_number),
+            zip_code: preferenceData.payer.address.zip_code
+          }
+        }),
       },
       back_urls: preferenceData.back_urls || {
-        success: `${new URL(req.url).origin}/payment/success`,
-        failure: `${new URL(req.url).origin}/payment/failure`,
-        pending: `${new URL(req.url).origin}/payment/pending`,
+        success: 'https://lunatiqueshop.netlify.app/payment/success',
+        failure: 'https://lunatiqueshop.netlify.app/payment/failure',
+        pending: 'https://lunatiqueshop.netlify.app/payment/pending',
       },
-      auto_return: preferenceData.auto_return || 'approved',
+      auto_return: 'approved',
       notification_url: preferenceData.notification_url,
-      statement_descriptor: preferenceData.statement_descriptor || 'LUNATIQUE',
+      statement_descriptor: 'LUINATIQUE',
       external_reference: preferenceData.external_reference || `LUINA_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`,
-      expires: preferenceData.expires !== false,
-      expiration_date_to: preferenceData.expiration_date_to || (() => {
+      expires: true,
+      expiration_date_to: (() => {
         const exp = new Date();
         exp.setHours(exp.getHours() + 24);
         return exp.toISOString();
       })(),
       payment_methods: {
         installments: 12,
-        ...preferenceData.payment_methods
+        excluded_payment_types: [],
+        excluded_payment_methods: []
       },
-      ...(preferenceData.shipments && { shipments: preferenceData.shipments }),
+      ...(preferenceData.shipments && { 
+        shipments: {
+          mode: 'not_specified',
+          ...preferenceData.shipments
+        }
+      }),
       metadata: {
         source: 'luinatique_ecommerce',
         timestamp: new Date().toISOString(),
+        test_mode: isTestToken,
         ...preferenceData.metadata
       }
     };
@@ -129,7 +181,7 @@ Deno.serve(async (req: Request) => {
       status: response.status,
       statusText: response.statusText,
       headers: Object.fromEntries(response.headers.entries()),
-      body: responseText
+      body: responseText.substring(0, 500) // Limitar el log
     });
 
     if (!response.ok) {
@@ -139,11 +191,20 @@ Deno.serve(async (req: Request) => {
         body: responseText
       });
       
+      let errorDetails = responseText;
+      try {
+        const errorJson = JSON.parse(responseText);
+        errorDetails = errorJson.message || errorJson.error || JSON.stringify(errorJson);
+      } catch (e) {
+        // Si no es JSON, usar el texto tal cual
+      }
+      
       return new Response(
         JSON.stringify({ 
           error: 'MercadoPago API error',
           status: response.status,
-          details: responseText
+          details: errorDetails,
+          message: 'Error al crear la preferencia de pago. Verifica las credenciales de MercadoPago.'
         }),
         { 
           status: response.status, 
