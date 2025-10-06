@@ -1,232 +1,296 @@
-# 🚀 Quick Setup - Admin Dashboard & n8n Integration
+# ⚡ Setup Rápido de n8n para Lunatique - 5 Minutos
 
-## ✅ Lo que se ha implementado
-
-### 1. **Order Management en Admin Dashboard**
-📍 Ruta: `/admin` → Tab "Orders"
-
-**Características:**
-- ✅ Ver todas las órdenes con detalles completos
-- ✅ Filtrar por estado (pending, processing, shipped, delivered, cancelled)
-- ✅ Búsqueda por número de orden, nombre o email
-- ✅ Cambiar estado de órdenes directamente
-- ✅ Ver detalles completos (cliente, dirección, pago, items)
-- ✅ Exportar a CSV
-- ✅ Modal detallado por orden
-
-### 2. **Webhooks para n8n**
-📍 Edge Function: `supabase/functions/n8n-webhook/index.ts`
-
-**Eventos que disparan webhooks:**
-- 🆕 `order.created` - Nueva orden creada
-- 🔄 `order.status_changed` - Cambio de estado
-- 💳 `order.payment_updated` - Actualización de pago
-
-### 3. **Database Triggers**
-📍 Migration: `supabase/migrations/20250104_n8n_webhooks.sql`
-
-**Triggers configurados:**
-- `orders_insert_webhook` - Se dispara al INSERT
-- `orders_update_webhook` - Se dispara al UPDATE (solo si cambió status o payment_status)
+Esta es la guía express para configurar las automatizaciones básicas de n8n en tu e-commerce Lunatique. Para la guía completa con todos los workflows avanzados, consulta [N8N_INTEGRATION_GUIDE.md](./N8N_INTEGRATION_GUIDE.md).
 
 ---
 
-## 🔧 Setup Rápido (5 minutos)
+## 🎯 Lo que vas a lograr en 5 minutos:
 
-### Paso 1: Deploy Edge Function
+- ✅ Email automático de confirmación de orden
+- ✅ Email cuando cambia el estado (enviado, entregado)
+- ✅ Notificación WhatsApp al admin por cada orden
+- ✅ Todo funcionando y probado
+
+---
+
+## 📋 Requisitos Previos
+
+- [ ] Cuenta de n8n (Cloud o self-hosted)
+- [ ] Gmail con App Password generado
+- [ ] Proyecto de Supabase configurado
+- [ ] (Opcional) Cuenta de Twilio para WhatsApp
+
+---
+
+## 🚀 Paso 1: Configurar n8n (1 minuto)
+
+### Si usas n8n Cloud:
+1. Ve a [n8n.io](https://n8n.io) y crea cuenta
+2. Crea un nuevo workflow
+
+### Si usas self-hosted:
 ```bash
-supabase functions deploy n8n-webhook
+# Instalación rápida
+npm install n8n -g
+n8n start
+
+# O con Docker
+docker run -it --rm --name n8n -p 5678:5678 -v ~/.n8n:/home/node/.n8n n8nio/n8n
 ```
 
-### Paso 2: Aplicar Migration
-```bash
-supabase db push
+Accede a: `http://localhost:5678`
+
+---
+
+## 🔑 Paso 2: Agregar Credenciales (2 minutos)
+
+### Gmail:
+
+1. Ve a: [Google App Passwords](https://myaccount.google.com/apppasswords)
+2. Genera nueva contraseña de aplicación
+3. En n8n:
+   - Settings → Credentials → New
+   - Type: `Gmail`
+   - Email: `tu-email@gmail.com`
+   - App Password: `pega-aquí`
+
+### Supabase:
+
+1. En n8n:
+   - Settings → Credentials → New
+   - Type: `Supabase`
+   - Host: `https://sjrlfwxfojfyzujulyas.supabase.co`
+   - API Key: (Tu Supabase anon key)
+
+### Twilio (Opcional para WhatsApp):
+
+1. Ve a: [Twilio Console](https://console.twilio.com)
+2. Get your Account SID y Auth Token
+3. En n8n:
+   - Settings → Credentials → New
+   - Type: `Twilio`
+   - Account SID: `AC...`
+   - Auth Token: `...`
+
+---
+
+## 📧 Paso 3: Crear Workflow Email (2 minutos)
+
+### Opción A: Importar Template (RECOMENDADO)
+
+1. Descarga el template: [order-confirmation-workflow.json](./templates/order-confirmation-workflow.json)
+2. En n8n: Click en "..." → Import from File
+3. Selecciona el archivo descargado
+4. Configura tus credenciales
+5. Activa el workflow (toggle)
+
+### Opción B: Crear desde cero
+
+1. **Agregar Webhook Node:**
+   - Drag & Drop "Webhook" al canvas
+   - HTTP Method: `POST`
+   - Path: `order-created`
+   - Authentication: `Header Auth`
+   - Header Name: `X-Webhook-Secret`
+   - Header Value: `tu_secret_aqui`
+
+2. **Agregar Function Node:**
+   - Conecta al Webhook
+   - Pega este código:
+
+```javascript
+const order = $input.first().json.data;
+const items = $input.first().json.order_items || [];
+
+return {
+  customer_name: order.customer_name,
+  customer_email: order.customer_email,
+  order_number: order.order_number,
+  total: order.total,
+  items_count: items.length
+};
 ```
 
-### Paso 3: Configurar Variables de Entorno en Supabase
+3. **Agregar Gmail Node:**
+   - Conecta al Function
+   - To: `{{$json.customer_email}}`
+   - Subject: `¡Orden Confirmada! #{{$json.order_number}}`
+   - Message: 
 
-Ve a **Supabase Dashboard > Project Settings > Edge Functions**:
+```
+Hola {{$json.customer_name}},
 
-```bash
-# URLs de tus workflows de n8n
-N8N_WEBHOOK_ORDER_CREATED=https://your-n8n.com/webhook/order-created
-N8N_WEBHOOK_ORDER_STATUS_CHANGED=https://your-n8n.com/webhook/order-status-changed
-N8N_WEBHOOK_ORDER_PAYMENT_UPDATED=https://your-n8n.com/webhook/order-payment-updated
+¡Gracias por tu compra! Tu orden #{{$json.order_number}} ha sido confirmada.
 
-# Secret para validación (opcional pero recomendado)
+Total: ${{$json.total}}
+Productos: {{$json.items_count}}
+
+Puedes rastrear tu orden en: https://lunatiqueshop.netlify.app/orders
+
+Saludos,
+Equipo Lunatique
+```
+
+4. **Activar Workflow:**
+   - Click en el toggle (arriba derecha)
+   - Copia la Webhook URL
+
+---
+
+## ⚙️ Paso 4: Configurar Supabase (30 segundos)
+
+1. Ve a Supabase Dashboard → Project Settings → Edge Functions → Secrets
+2. Agrega esta variable:
+
+```
+N8N_WEBHOOK_ORDER_CREATED=https://tu-n8n.app/webhook/order-created
 N8N_WEBHOOK_SECRET=tu_secret_aqui
 ```
 
-### Paso 4: Crear Workflows en n8n
-
-Sigue la guía completa en: **[N8N_INTEGRATION_GUIDE.md](./N8N_INTEGRATION_GUIDE.md)**
-
-Templates de workflows incluidos:
-1. ✉️ Email de confirmación de orden
-2. 📦 Notificación de envío
-3. ✅ Notificación de entrega
-4. 💳 Confirmación de pago
+3. Guarda los cambios
 
 ---
 
-## 📊 Admin Dashboard - Nuevas Funcionalidades
+## 🧪 Paso 5: Probar (30 segundos)
 
-### Orders Tab
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Order Management                        [Export CSV]        │
-├─────────────────────────────────────────────────────────────┤
-│  [Search: order#/name/email]  [Filter by Status]            │
-├─────────────────────────────────────────────────────────────┤
-│  Order         Customer        Status      Payment   Total   │
-│  #ORDER-123    John Doe       [Processing] [Approved] $50    │
-│  #ORDER-124    Jane Smith     [Shipped]    [Approved] $100   │
-└─────────────────────────────────────────────────────────────┘
-```
+### Test con curl:
 
-**Click en el ícono 👁️ para ver detalles completos:**
-- Información del cliente
-- Dirección de envío
-- Detalles de pago
-- Lista de productos
-- Timeline del pedido
-
----
-
-## 🔄 Flujo de Automatización
-
-```mermaid
-graph LR
-    A[Cliente Paga] --> B[Orden Creada en DB]
-    B --> C[Trigger SQL]
-    C --> D[Edge Function]
-    D --> E[n8n Webhook]
-    E --> F[Email Confirmación]
-    E --> G[Notificación Admin]
-    
-    H[Admin cambia Status] --> I[Update en DB]
-    I --> C
-    E --> J[Email Status Change]
-```
-
----
-
-## 🧪 Testing
-
-### Test 1: Crear Orden de Prueba
 ```bash
-# Haz un pago de prueba con PayPal/MercadoPago
-# Verifica que:
-# 1. La orden aparece en /admin → Orders
-# 2. El webhook se disparó (ver logs en Supabase)
-# 3. El email se envió (verificar en n8n executions)
+curl -X POST https://tu-n8n.app/webhook/order-created \
+  -H "Content-Type: application/json" \
+  -H "X-Webhook-Secret: tu_secret_aqui" \
+  -d '{
+    "data": {
+      "order_number": "TEST-001",
+      "customer_name": "Test User",
+      "customer_email": "tu-email@test.com",
+      "total": 100
+    },
+    "order_items": [
+      {"product_name": "Test Product", "quantity": 1}
+    ]
+  }'
 ```
 
-### Test 2: Cambiar Estado
-```bash
-# En /admin → Orders:
-# 1. Click en select de status
-# 2. Cambiar a "Shipped"
-# 3. Verificar webhook en n8n
-# 4. Verificar email de envío
+### Test desde Supabase:
+
+```sql
+-- En SQL Editor
+INSERT INTO orders (
+  order_number, 
+  customer_name, 
+  customer_email, 
+  total
+) VALUES (
+  'TEST-002',
+  'Test User',
+  'tu-email@test.com',
+  100
+);
 ```
 
-### Test 3: Ver Logs
-```bash
-# Logs de Edge Function
-supabase functions logs n8n-webhook --tail
-
-# Ver últimas 10 ejecuciones
-supabase functions logs n8n-webhook -n 10
-```
+**✅ Si recibes el email, ¡funciona!**
 
 ---
 
-## 📧 Templates de Email
+## 📱 Bonus: WhatsApp en 2 minutos
 
-### Email de Confirmación
-```
-Asunto: ✅ Orden Confirmada - #ORDER-123
+1. **Setup Twilio WhatsApp Sandbox:**
+   - Ve a: [Twilio Console → WhatsApp](https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn)
+   - Envía `join <tu-codigo>` al número de Twilio desde tu WhatsApp
+   - Ejemplo: `join purple-tiger`
 
-¡Hola [Nombre]!
+2. **Agregar HTTP Request Node** en tu workflow:
+   - Conecta después del Function Node
+   - Method: `POST`
+   - URL: `https://api.twilio.com/2010-04-01/Accounts/{{$credentials.twilio.accountSid}}/Messages.json`
+   - Authentication: `Basic Auth` (usa tus credenciales Twilio)
+   - Body Parameters:
+     - `From`: `whatsapp:+14155238886` (Twilio sandbox)
+     - `To`: `whatsapp:+51920502708` (tu número)
+     - `Body`: `🛒 Nueva orden #{{$json.order_number}} de {{$json.customer_name}} - ${{$json.total}}`
 
-Tu orden #ORDER-123 ha sido confirmada.
-
-Productos:
-- Collar Miyuki x1 - $10.00
-
-Total: $10.00
-
-Recibirás un email cuando sea enviado.
-```
-
-### Email de Envío
-```
-Asunto: 📦 Tu pedido ha sido enviado
-
-¡Hola [Nombre]!
-
-Tu orden #ORDER-123 está en camino.
-Tiempo estimado: 3-5 días hábiles.
-```
+3. **Probar:**
+   - Ejecuta el workflow
+   - Deberías recibir WhatsApp
 
 ---
 
-## 🎯 Próximas Mejoras Sugeridas
+## 🎉 ¡Listo!
 
-- [ ] Tracking de envío con número de guía
-- [ ] Notificaciones push en el admin
-- [ ] Integración con WhatsApp Business
-- [ ] Dashboard de métricas en tiempo real
-- [ ] Auto-actualización de inventario
-- [ ] Sistema de reviews post-entrega
-- [ ] Facturación electrónica automática
+Ahora tienes:
+- ✅ Emails automáticos funcionando
+- ✅ Notificaciones WhatsApp (si configuraste)
+- ✅ Sistema probado y activo
 
 ---
 
-## 📚 Documentación Completa
+## 🚀 Próximos Pasos (Opcional)
 
-- **[N8N_INTEGRATION_GUIDE.md](./N8N_INTEGRATION_GUIDE.md)** - Guía detallada de integración con n8n
-- **[README.md](./README.md)** - Documentación general del proyecto
+Para agregar más automatizaciones:
+
+1. **Email de Estado:** Duplica el workflow y cambia webhook a `order-status`
+2. **Google Sheets:** Agrega nodo de Google Sheets para registrar órdenes
+3. **Slack/Discord:** Agrega nodo para notificar al equipo
+4. **Carrito Abandonado:** Crea workflow con Cron que se ejecute cada 6 horas
+5. **Review Email:** Crea workflow con Cron diario para pedir reviews
+
+**Ver guía completa:** [N8N_INTEGRATION_GUIDE.md](./N8N_INTEGRATION_GUIDE.md)
 
 ---
 
-## 🆘 Troubleshooting
-
-### Webhook no se dispara
-```bash
-# Verificar triggers
-SELECT * FROM information_schema.triggers 
-WHERE event_object_table = 'orders';
-
-# Ver logs
-supabase functions logs n8n-webhook --tail
-```
+## 🆘 Problemas Comunes
 
 ### Email no llega
-1. Verificar credenciales en n8n (Gmail/SMTP)
-2. Revisar executions en n8n
-3. Verificar carpeta de spam
+- ✅ Verifica Gmail App Password
+- ✅ Revisa carpeta Spam
+- ✅ Verifica ejecución en n8n → Executions
 
-### Error 500 en Edge Function
-```bash
-# Ver logs detallados
-supabase functions logs n8n-webhook -n 50
-```
+### WhatsApp no envía
+- ✅ Verifica que enviaste "join" al número de Twilio
+- ✅ Revisa logs en Twilio Console
+- ✅ Verifica formato: `whatsapp:+codigo-pais-numero`
 
----
+### Webhook retorna 401
+- ✅ Verifica que el secret coincide
+- ✅ Header debe ser: `X-Webhook-Secret`
 
-## ✅ Checklist de Verificación
-
-- [ ] Edge function deployed
-- [ ] Migration aplicada
-- [ ] Variables de entorno configuradas
-- [ ] Workflows de n8n creados y activos
-- [ ] Test de orden realizado
-- [ ] Email de confirmación recibido
-- [ ] Admin dashboard accesible
-- [ ] Status change funciona
+### Workflow no se ejecuta
+- ✅ Verifica que está activo (toggle verde)
+- ✅ Revisa Executions para ver errores
+- ✅ Test manual: Click derecho → Execute Workflow
 
 ---
 
-¡Listo! Tu sistema de automatización está configurado. 🎉
+## 📚 Recursos
+
+- [Guía Completa (N8N_INTEGRATION_GUIDE.md)](./N8N_INTEGRATION_GUIDE.md) - Todos los workflows avanzados
+- [n8n Docs](https://docs.n8n.io)
+- [Supabase Docs](https://supabase.com/docs)
+- [Twilio WhatsApp](https://www.twilio.com/docs/whatsapp)
+
+---
+
+## 💡 Tips
+
+1. **Guarda tu webhook URL** - La necesitarás para configurar más workflows
+2. **Usa el mismo secret** para todos los webhooks - Más fácil de mantener
+3. **Test frecuentemente** - Mejor detectar errores temprano
+4. **Monitorea Executions** - Revisa logs semanalmente
+5. **Backups** - Exporta tus workflows regularmente
+
+---
+
+**¡Tu sistema está listo! 🎉**
+
+Ahora cada vez que alguien haga una compra:
+1. Recibirán un email profesional automáticamente
+2. Tú recibirás una notificación por WhatsApp
+3. Todo queda registrado para seguimiento
+
+**Tu e-commerce trabaja 24/7, incluso mientras duermes. 😴✨**
+
+---
+
+*Tiempo total de setup: ~5 minutos*  
+*Actualizado: Octubre 2025*
