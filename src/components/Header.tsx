@@ -134,26 +134,17 @@ const Header = () => {
                     
                     return (
                       <div key="tienda" className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <a
-                            href="/shop"
-                            className="flex-1 block py-3 px-2 text-sm font-medium text-foreground hover:text-primary hover:bg-accent rounded-md transition-all"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            TIENDA
-                          </a>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleCategory('tienda')}
-                            className="p-2"
-                          >
-                            {isExpanded ? 
-                              <ChevronUp className="h-4 w-4" /> : 
-                              <ChevronDown className="h-4 w-4" />
-                            }
-                          </Button>
-                        </div>
+                        {/* TIENDA - Button only (no redirect) */}
+                        <button
+                          onClick={() => toggleCategory('tienda')}
+                          className="w-full flex items-center justify-between py-3 px-2 text-sm font-medium text-foreground hover:text-primary hover:bg-accent rounded-md transition-all"
+                        >
+                          <span>TIENDA</span>
+                          {isExpanded ? 
+                            <ChevronUp className="h-4 w-4" /> : 
+                            <ChevronDown className="h-4 w-4" />
+                          }
+                        </button>
                         
                         {isExpanded && (
                           <div className="ml-4 space-y-1 bg-muted/30 rounded-md p-2">
@@ -206,26 +197,17 @@ const Header = () => {
                     
                     return (
                       <div key="lunatique" className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <a
-                            href="/lunatique"
-                            className="flex-1 block py-3 px-2 text-sm font-medium text-foreground hover:text-primary hover:bg-accent rounded-md transition-all"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            LUNATIQUE
-                          </a>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleCategory('lunatique')}
-                            className="p-2"
-                          >
-                            {isExpanded ? 
-                              <ChevronUp className="h-4 w-4" /> : 
-                              <ChevronDown className="h-4 w-4" />
-                            }
-                          </Button>
-                        </div>
+                        {/* LUNATIQUE - Button only (no redirect) */}
+                        <button
+                          onClick={() => toggleCategory('lunatique')}
+                          className="w-full flex items-center justify-between py-3 px-2 text-sm font-medium text-foreground hover:text-primary hover:bg-accent rounded-md transition-all"
+                        >
+                          <span>LUNATIQUE</span>
+                          {isExpanded ? 
+                            <ChevronUp className="h-4 w-4" /> : 
+                            <ChevronDown className="h-4 w-4" />
+                          }
+                        </button>
                         
                         {isExpanded && (
                           <div className="ml-4 space-y-1 bg-muted/30 rounded-md p-2">
