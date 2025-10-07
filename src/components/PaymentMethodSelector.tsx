@@ -206,13 +206,8 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         onSuccess({ preference_id: preference.id, method: 'mercadopago' });
       }
       
-      const checkoutUrl = preference.sandbox_init_point || preference.init_point;
-      
-      if (!checkoutUrl) {
-        throw new Error('No se recibió URL de checkout de MercadoPago');
-      }
-      
-      window.location.href = checkoutUrl;
+      // USAR EL MÉTODO redirectToCheckout QUE TIENE DETECCIÓN AUTOMÁTICA
+      mercadoPagoService.redirectToCheckout(preference);
       
     } catch (error) {
       console.error('❌ MercadoPago error:', error);
