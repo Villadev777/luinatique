@@ -6,12 +6,12 @@ const Footer = () => {
     {
       title: "Tienda",
       links: [
-        { name: "Nuevos Arrivals", href: "/shop" },
-        { name: "Anillos", href: "/shop" },
-        { name: "Collares", href: "/shop" },
-        { name: "Aretes", href: "/shop" },
-        { name: "Pulseras", href: "/shop" },
-        { name: "Ofertas", href: "/shop" }
+        { name: "Nuevos Arrivals", href: "/shop?filter=new" },
+        { name: "Anillos", href: "/shop/anillos" },
+        { name: "Collares", href: "/shop/collares" },
+        { name: "Aretes", href: "/shop/aretes" },
+        { name: "Pulseras", href: "/shop/pulseras" },
+        { name: "Ofertas", href: "/sale" }
       ]
     },
     {
@@ -27,35 +27,35 @@ const Footer = () => {
       title: "Atención al Cliente",
       links: [
         { name: "Contáctanos", href: "/contactanos" },
-        { name: "Guía de Tallas", href: "#size-guide" },
-        { name: "Garantía y Cuidado", href: "/Garantia" },
+        { name: "Guía de Tallas", href: "/contactanos#size-guide" },
+        { name: "Garantía y Cuidado", href: "/garantia" },
         { name: "Política de devoluciones", href: "/envios" },
         { name: "Política de privacidad", href: "/privacidad" },
-        { name: "Preguntas Frecuentes", href: "#faq" }
+        { name: "Preguntas Frecuentes", href: "/contactanos#faq" }
       ]
     }
   ];
 
   const socialLinks = [
     { icon: Instagram, href: "https://www.instagram.com/lunatiqueshop/?hl=es-la", label: "Instagram" },
-    { icon: Facebook, href: "#https://www.facebook.com/lunatiqueshopperu/?locale=es_LA", label: "Facebook" },
+    { icon: Facebook, href: "https://www.facebook.com/lunatiqueshopperu/?locale=es_LA", label: "Facebook" },
     { icon: Image, href: "#pinterest", label: "Pinterest" },
-    { icon: Mail, href: "#email", label: "Correo" }
+    { icon: Mail, href: "mailto:contact@lunatique.shop", label: "Correo" }
   ];
 
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
-        <div className="py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="py-12 md:py-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
             {/* Brand Section */}
             <div className="lg:col-span-1">
               <h3 className="font-playfair text-2xl font-semibold mb-4">
                 LUNATIQUÊ
               </h3>
-              <p className="text-primary-foreground/80 leading-relaxed mb-6">
-                Creando piezas únicas desde 2010.
+              <p className="text-primary-foreground/80 leading-relaxed mb-6 text-sm">
+                Creando piezas únicas desde 2010. Joyería artesanal hecha con amor.
               </p>
               
               <div className="flex space-x-4">
@@ -64,10 +64,15 @@ const Footer = () => {
                     key={social.label}
                     variant="ghost"
                     size="sm"
-                    className="text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                    className="text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10 transition-all"
                     asChild
                   >
-                    <a href={social.href} aria-label={social.label}>
+                    <a 
+                      href={social.href} 
+                      aria-label={social.label}
+                      target={social.href.startsWith('http') ? '_blank' : undefined}
+                      rel={social.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    >
                       <social.icon className="h-4 w-4" />
                     </a>
                   </Button>
@@ -78,7 +83,7 @@ const Footer = () => {
             {/* Footer Links */}
             {footerSections.map((section) => (
               <div key={section.title}>
-                <h4 className="font-semibold text-primary-foreground mb-4 tracking-wide">
+                <h4 className="font-semibold text-primary-foreground mb-4 tracking-wide text-sm">
                   {section.title.toUpperCase()}
                 </h4>
                 <ul className="space-y-3">
@@ -86,7 +91,7 @@ const Footer = () => {
                     <li key={link.name}>
                       <a
                         href={link.href}
-                        className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-200"
+                        className="text-primary-foreground/80 hover:text-primary-foreground transition-colors duration-200 text-sm block"
                       >
                         {link.name}
                       </a>
@@ -99,20 +104,29 @@ const Footer = () => {
         </div>
 
         {/* Bottom Section */}
-        <div className="border-t border-primary-foreground/20 py-8">
+        <div className="border-t border-primary-foreground/20 py-6 md:py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-primary-foreground/60 text-sm">
-              © 2024 Lunatiquê. Todos los derechos reservados.
+            <div className="text-primary-foreground/60 text-xs md:text-sm">
+              © {new Date().getFullYear()} Lunatiquê. Todos los derechos reservados.
             </div>
             
-            <div className="flex space-x-6 text-sm">
-              <a href="#privacy" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
+            <div className="flex flex-wrap justify-center space-x-4 md:space-x-6 text-xs md:text-sm">
+              <a 
+                href="/privacidad" 
+                className="text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+              >
                 Política de Privacidad
               </a>
-              <a href="#terms" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
+              <a 
+                href="/envios" 
+                className="text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+              >
                 Términos de Servicio
               </a>
-              <a href="#accessibility" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
+              <a 
+                href="/contactanos" 
+                className="text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+              >
                 Accesibilidad
               </a>
             </div>
