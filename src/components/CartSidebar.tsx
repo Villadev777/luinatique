@@ -70,7 +70,7 @@ export const CartSidebar: React.FC = () => {
 
   const subtotal = state.totalPrice;
   const shipping = subtotal >= 50 ? 0 : 9.99;
-  const tax = (subtotal - discount) * 0.18; // 18% tax
+  const tax = (subtotal - discount) * 0; // 18% tax
   const finalTotal = subtotal - discount + shipping + tax;
 
   return (
