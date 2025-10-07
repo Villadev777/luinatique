@@ -76,7 +76,8 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
 
       // Esperar un momento antes de redirigir
       setTimeout(() => {
-        mercadoPagoService.redirectToCheckout(preference, true); // true para sandbox
+        // AUTO-DETECCIÓN: El servicio detecta automáticamente si usar producción o sandbox
+        mercadoPagoService.redirectToCheckout(preference);
         onSuccess?.(preference.id);
       }, 1000);
 
