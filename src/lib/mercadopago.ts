@@ -359,28 +359,29 @@ export class MercadoPagoService {
 
   /**
    * Redirige al checkout de MercadoPago
-   * Detecta automáticamente si debe usar PRODUCCIÓN o SANDBOX
+   * LÓGICA CORREGIDA: Prioriza PRODUCCIÓN sobre SANDBOX
    */
   redirectToCheckout(preference: PreferenceResponse): void {
-    // DETECCIÓN AUTOMÁTICA: 
-    // - Si existe sandbox_init_point → Usar SANDBOX (token TEST)
-    // - Si solo existe init_point → Usar PRODUCCIÓN (token real)
-    const hasSandbox = !!preference.sandbox_init_point;
     const hasProduction = !!preference.init_point;
+    const hasSandbox = !!preference.sandbox_init_point;
     
     let checkoutUrl: string | undefined;
     let mode: 'SANDBOX' | 'PRODUCCIÓN' | 'UNKNOWN';
     
-    if (hasSandbox) {
-      // Token TEST - Usar sandbox
-      checkoutUrl = preference.sandbox_init_point;
-      mode = 'SANDBOX';
-    } else if (hasProduction) {
-      // Token PRODUCCIÓN - Usar producción
+    // 🔧 CAMBIO CRÍTICO: Priorizar PRODUCCIÓN sobre SANDBOX
+    if (hasProduction) {
+      // Usar producción si está disponible
       checkoutUrl = preference.init_point;
       mode = 'PRODUCCIÓN';
+      console.log('✅ Usando modo PRODUCCIÓN (init_point está disponible)');
+    } else if (hasSandbox) {
+      // Solo usar sandbox si NO hay producción disponible
+      checkoutUrl = preference.sandbox_init_point;
+      mode = 'SANDBOX';
+      console.log('⚠️ Usando modo SANDBOX (solo sandbox_init_point disponible)');
     } else {
       mode = 'UNKNOWN';
+      console.error('❌ No hay URLs disponibles en la preferencia');
     }
     
     console.log('🔗 Redirecting to checkout:', {
@@ -388,7 +389,10 @@ export class MercadoPagoService {
       checkoutUrl,
       hasProductionUrl: hasProduction,
       hasSandboxUrl: hasSandbox,
-      preference_id: preference.id
+      preference_id: preference.id,
+      // Mostrar ambos URLs para debug
+      production_url: preference.init_point,
+      sandbox_url: preference.sandbox_init_point
     });
     
     if (!checkoutUrl) {
@@ -407,6 +411,7 @@ export class MercadoPagoService {
     }
     
     // Redirigir a MercadoPago
+    console.log('➡️ Redirigiendo a:', checkoutUrl);
     window.location.href = checkoutUrl;
   }
 
