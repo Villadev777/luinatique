@@ -359,29 +359,54 @@ export class MercadoPagoService {
 
   /**
    * Redirige al checkout de MercadoPago
-   * SIEMPRE usa sandbox para pruebas automáticamente
+   * Detecta automáticamente si debe usar PRODUCCIÓN o SANDBOX
    */
-  redirectToCheckout(preference: PreferenceResponse, useSandbox?: boolean): void {
-    // Si no se especifica, detecta automáticamente si es TEST
-    if (useSandbox === undefined) {
-      // Detecta si estamos en modo TEST basándose en si hay sandbox_init_point
-      useSandbox = !!preference.sandbox_init_point;
+  redirectToCheckout(preference: PreferenceResponse): void {
+    // DETECCIÓN AUTOMÁTICA: 
+    // - Si existe sandbox_init_point → Usar SANDBOX (token TEST)
+    // - Si solo existe init_point → Usar PRODUCCIÓN (token real)
+    const hasSandbox = !!preference.sandbox_init_point;
+    const hasProduction = !!preference.init_point;
+    
+    let checkoutUrl: string | undefined;
+    let mode: 'SANDBOX' | 'PRODUCCIÓN' | 'UNKNOWN';
+    
+    if (hasSandbox) {
+      // Token TEST - Usar sandbox
+      checkoutUrl = preference.sandbox_init_point;
+      mode = 'SANDBOX';
+    } else if (hasProduction) {
+      // Token PRODUCCIÓN - Usar producción
+      checkoutUrl = preference.init_point;
+      mode = 'PRODUCCIÓN';
+    } else {
+      mode = 'UNKNOWN';
     }
     
-    const checkoutUrl = useSandbox ? preference.sandbox_init_point : preference.init_point;
-    
     console.log('🔗 Redirecting to checkout:', {
-      useSandbox,
+      mode,
       checkoutUrl,
-      hasProductionUrl: !!preference.init_point,
-      hasSandboxUrl: !!preference.sandbox_init_point
+      hasProductionUrl: hasProduction,
+      hasSandboxUrl: hasSandbox,
+      preference_id: preference.id
     });
     
     if (!checkoutUrl) {
-      console.error('❌ No checkout URL available for the selected mode');
-      throw new Error('URL de checkout no disponible');
+      console.error('❌ No checkout URL available');
+      console.error('Preference response:', preference);
+      throw new Error('URL de checkout no disponible. Verifica tu configuración de MercadoPago.');
     }
     
+    // Mensaje informativo según el modo
+    if (mode === 'PRODUCCIÓN') {
+      console.warn('⚠️ MODO PRODUCCIÓN: Los pagos serán REALES');
+      console.warn('⚠️ Solo usa tarjetas reales en este modo');
+    } else if (mode === 'SANDBOX') {
+      console.log('✅ MODO SANDBOX: Usa tarjetas de prueba');
+      console.log('💳 Tarjeta de prueba: 5031 7557 3453 0604');
+    }
+    
+    // Redirigir a MercadoPago
     window.location.href = checkoutUrl;
   }
 
