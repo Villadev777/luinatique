@@ -18,7 +18,8 @@ import {
   Shield, 
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  Truck
 } from 'lucide-react';
 
 interface PaymentMethod {
@@ -248,8 +249,14 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     }
   };
 
-  const totalPEN = checkoutData.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+  // 🔧 CÁLCULO CORREGIDO CON ENVÍO
+  const subtotalPEN = checkoutData.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const shippingCost = subtotalPEN >= 50 ? 0 : 9.99;
+  const totalPEN = subtotalPEN + shippingCost;
+  
+  // Para PayPal (USD)
   const totalUSD = paypalService.getTotalAmountUSD(checkoutData);
+  const shippingUSD = (shippingCost / 3.75).toFixed(2); // Conversión aproximada PEN a USD
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -340,20 +347,34 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>S/ {totalPEN.toFixed(2)}</span>
+                  <span>S/ {subtotalPEN.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Envío:</span>
-                  <span>Gratis</span>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-muted-foreground" />
+                    <span>Envío:</span>
+                  </div>
+                  <div className="text-right">
+                    {shippingCost === 0 ? (
+                      <span className="text-green-600 font-semibold">GRATIS</span>
+                    ) : (
+                      <span>S/ {shippingCost.toFixed(2)}</span>
+                    )}
+                  </div>
                 </div>
+                {subtotalPEN < 50 && (
+                  <p className="text-xs text-muted-foreground">
+                    💡 Agrega S/ {(50 - subtotalPEN).toFixed(2)} más para envío gratis
+                  </p>
+                )}
                 <Separator />
                 <div className="flex justify-between font-bold">
                   <span>Total:</span>
                   <div className="text-right">
                     <div>S/ {totalPEN.toFixed(2)}</div>
                     {selectedMethod === 'paypal' && (
-                      <div className="text-sm text-muted-foreground">
-                        ≈ ${totalUSD.toFixed(2)} USD
+                      <div className="text-sm text-muted-foreground font-normal">
+                        ≈ ${(totalUSD + parseFloat(shippingUSD)).toFixed(2)} USD
                       </div>
                     )}
                   </div>
@@ -404,8 +425,13 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             </CardContent>
           </Card>
 
-          <div className="text-center text-xs text-muted-foreground">
-            🔒 Tus datos están protegidos con encriptación SSL
+          <div className="text-center space-y-1">
+            <div className="text-xs text-muted-foreground">
+              🔒 Tus datos están protegidos con encriptación SSL
+            </div>
+            <div className="text-xs text-muted-foreground">
+              📦 Envío gratis en pedidos superiores a S/ 50
+            </div>
           </div>
         </div>
       </div>
