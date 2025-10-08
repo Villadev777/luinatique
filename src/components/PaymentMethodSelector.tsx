@@ -251,12 +251,13 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
   // 🔧 CÁLCULO CORREGIDO CON ENVÍO
   const subtotalPEN = checkoutData.items.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const shippingCost = subtotalPEN >= 50 ? 0 : 9.99;
-  const totalPEN = subtotalPEN + shippingCost;
+  const shippingCostPEN = mercadoPagoService.calculateShipping(subtotalPEN);
+  const totalPEN = subtotalPEN + shippingCostPEN;
   
-  // Para PayPal (USD)
-  const totalUSD = paypalService.getTotalAmountUSD(checkoutData);
-  const shippingUSD = (shippingCost / 3.75).toFixed(2); // Conversión aproximada PEN a USD
+  // Para PayPal (USD) - Ahora usa el método correcto que considera el umbral en PEN
+  const subtotalUSD = paypalService.getTotalAmountUSD(checkoutData);
+  const shippingCostUSD = paypalService.getShippingCostUSD(subtotalPEN); // Pasa subtotal en PEN
+  const totalUSD = subtotalUSD + shippingCostUSD;
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -355,10 +356,10 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                     <span>Envío:</span>
                   </div>
                   <div className="text-right">
-                    {shippingCost === 0 ? (
+                    {shippingCostPEN === 0 ? (
                       <span className="text-green-600 font-semibold">GRATIS</span>
                     ) : (
-                      <span>S/ {shippingCost.toFixed(2)}</span>
+                      <span>S/ {shippingCostPEN.toFixed(2)}</span>
                     )}
                   </div>
                 </div>
@@ -374,7 +375,10 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                     <div>S/ {totalPEN.toFixed(2)}</div>
                     {selectedMethod === 'paypal' && (
                       <div className="text-sm text-muted-foreground font-normal">
-                        ≈ ${(totalUSD + parseFloat(shippingUSD)).toFixed(2)} USD
+                        ≈ ${totalUSD.toFixed(2)} USD
+                        {shippingCostPEN === 0 && (
+                          <span className="text-green-600 ml-1">(Envío gratis)</span>
+                        )}
                       </div>
                     )}
                   </div>
