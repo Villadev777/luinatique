@@ -5,6 +5,7 @@ import {
   PayPalButtonsOptions
 } from '../types/paypal';
 import { CartItem, CheckoutData } from '../types/mercadopago';
+import { getShippingConfig } from './shippingConfig';
 
 // Get Supabase URL from environment
 const getSupabaseUrl = () => {
@@ -41,10 +42,6 @@ export class PayPalService {
   
   // 🔧 Tasa de cambio PEN a USD (actualizar según necesidad)
   private readonly EXCHANGE_RATE = 0.267; // 1 PEN ≈ 0.267 USD
-  
-  // 🔧 Umbral para envío gratis en PEN
-  private readonly FREE_SHIPPING_THRESHOLD_PEN = 50;
-  private readonly SHIPPING_COST_PEN = 9.99;
 
   static getInstance(): PayPalService {
     if (!PayPalService.instance) {
@@ -55,16 +52,18 @@ export class PayPalService {
 
   /**
    * Calcula el costo de envío en USD basado en el subtotal en PEN
-   * 🔧 CORREGIDO: Ahora usa el umbral correcto de S/ 50 PEN
+   * 🆕 AHORA USA CONFIGURACIÓN DINÁMICA DE LA BASE DE DATOS
    */
-  private calculateShippingUSD(subtotalPEN: number): number {
-    if (subtotalPEN >= this.FREE_SHIPPING_THRESHOLD_PEN) {
-      console.log('🎉 Free shipping applied (order over S/ 50)');
+  private async calculateShippingUSD(subtotalPEN: number): Promise<number> {
+    const config = await getShippingConfig();
+    
+    if (subtotalPEN >= config.freeShippingThreshold) {
+      console.log('🎉 Free shipping applied (order qualifies)');
       return 0;
     }
     
-    const shippingUSD = this.convertPENToUSD(this.SHIPPING_COST_PEN);
-    console.log(`📦 Shipping cost: S/ ${this.SHIPPING_COST_PEN} = $${shippingUSD.toFixed(2)} USD`);
+    const shippingUSD = this.convertPENToUSD(config.shippingCost);
+    console.log(`📦 Shipping cost: S/ ${config.shippingCost} = $${shippingUSD.toFixed(2)} USD`);
     return shippingUSD;
   }
 
@@ -92,7 +91,7 @@ export class PayPalService {
    * Convert cart items to PayPal order format
    * 🔧 CORREGIDO: Calcula correctamente el envío basado en subtotal PEN
    */
-  buildPayPalOrder(checkoutData: CheckoutData): PayPalOrder {
+  async buildPayPalOrder(checkoutData: CheckoutData): Promise<PayPalOrder> {
     const items = checkoutData.items.map(item => ({
       name: item.title,
       unit_amount: {
@@ -113,8 +112,8 @@ export class PayPalService {
       total + (item.price * item.quantity), 0
     );
     
-    // Usar el subtotal en PEN para determinar si el envío es gratis
-    const shipping = this.calculateShippingUSD(subtotalPEN);
+    // 🆕 Usar el subtotal en PEN para determinar si el envío es gratis (configuración dinámica)
+    const shipping = await this.calculateShippingUSD(subtotalPEN);
     
     const tax = itemTotal * 0; // Sin impuestos adicionales en USD
     const totalAmount = itemTotal + shipping + tax;
@@ -181,7 +180,7 @@ export class PayPalService {
    */
   async createOrder(checkoutData: CheckoutData): Promise<string> {
     try {
-      const order = this.buildPayPalOrder(checkoutData);
+      const order = await this.buildPayPalOrder(checkoutData);
       
       console.log('Creating PayPal order:', order);
 
@@ -308,9 +307,10 @@ export class PayPalService {
   
   /**
    * Get shipping cost in USD based on PEN subtotal
+   * 🆕 AHORA USA CONFIGURACIÓN DINÁMICA
    */
-  getShippingCostUSD(subtotalPEN: number): number {
-    return this.calculateShippingUSD(subtotalPEN);
+  async getShippingCostUSD(subtotalPEN: number): Promise<number> {
+    return await this.calculateShippingUSD(subtotalPEN);
   }
 }
 

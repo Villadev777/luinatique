@@ -5,6 +5,7 @@ import {
   CheckoutData,
   CartItem 
 } from '../types/mercadopago';
+import { getShippingConfig } from './shippingConfig';
 
 // Get Supabase URL from environment - NUNCA usar localhost en producción
 const getSupabaseUrl = () => {
@@ -66,10 +67,11 @@ export class MercadoPagoService {
 
   /**
    * Calcula el costo de envío basado en el subtotal
-   * REGLA: Envío gratis en compras mayores a S/ 50
+   * 🆕 AHORA USA CONFIGURACIÓN DINÁMICA DE LA BASE DE DATOS
    */
-  calculateShipping(subtotal: number): number {
-    return subtotal >= 50 ? 0 : 9.99;
+  async calculateShipping(subtotal: number): Promise<number> {
+    const config = await getShippingConfig();
+    return subtotal >= config.freeShippingThreshold ? 0 : config.shippingCost;
   }
 
   /**
@@ -77,7 +79,7 @@ export class MercadoPagoService {
    */
   async createPreference(checkoutData: CheckoutData): Promise<PreferenceResponse> {
     try {
-      const preferenceData: PreferenceRequest = this.buildPreferenceRequest(checkoutData);
+      const preferenceData: PreferenceRequest = await this.buildPreferenceRequest(checkoutData);
       
       console.log('🚀 Creating MercadoPago preference...');
       console.log('📝 Preference data:', preferenceData);
@@ -263,16 +265,18 @@ export class MercadoPagoService {
 
   /**
    * Construye el objeto de preferencia para MercadoPago
-   * 🔧 CORREGIDO: Ahora incluye el costo de envío como item separado
+   * 🔧 USA CONFIGURACIÓN DINÁMICA: Incluye el costo de envío como item separado
    */
-  private buildPreferenceRequest(checkoutData: CheckoutData): PreferenceRequest {
+  private async buildPreferenceRequest(checkoutData: CheckoutData): Promise<PreferenceRequest> {
     const baseUrl = window.location.origin;
     
-    // Calcular subtotal y envío
+    // Calcular subtotal
     const subtotal = checkoutData.items.reduce((total, item) => 
       total + (item.price * item.quantity), 0
     );
-    const shippingCost = this.calculateShipping(subtotal);
+    
+    // 🆕 OBTENER CONFIGURACIÓN DINÁMICA
+    const shippingCost = await this.calculateShipping(subtotal);
     
     console.log('📦 Shipping calculation:', {
       subtotal: subtotal.toFixed(2),
@@ -303,7 +307,7 @@ export class MercadoPagoService {
       });
       console.log('✅ Added shipping item to preference:', shippingCost);
     } else {
-      console.log('🎉 Free shipping applied (order over S/ 50)');
+      console.log('🎉 Free shipping applied (order qualifies for free shipping)');
     }
     
     const preference: PreferenceRequest = {
