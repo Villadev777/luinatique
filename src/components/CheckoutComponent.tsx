@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Separator } from './ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { useShippingSettings } from '@/hooks/useShippingSettings';
 import { mercadoPagoService } from '../lib/mercadopago';
 import { CheckoutData, CartItem } from '../types/mercadopago';
 import PaymentMethodSelector from './PaymentMethodSelector';
@@ -24,6 +25,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
   onError,
 }) => {
   const { toast } = useToast();
+  const { calculateShipping, getFreeShippingThreshold, getAmountNeededForFreeShipping } = useShippingSettings();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('form');
   const [customerData, setCustomerData] = useState({
@@ -40,8 +42,10 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
   });
 
   const subtotal = mercadoPagoService.calculateTotal(items);
-  const shippingCost = subtotal >= 50 ? 0 : 9.99;
+  const shippingCost = calculateShipping(subtotal);
   const total = subtotal + shippingCost;
+  const freeShippingThreshold = getFreeShippingThreshold();
+  const amountNeeded = getAmountNeededForFreeShipping(subtotal);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,9 +324,9 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
                 </div>
               </div>
               
-              {subtotal < 50 && (
+              {amountNeeded > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  💡 Agrega {mercadoPagoService.formatPrice(50 - subtotal)} más para envío gratis
+                  💡 Agrega {mercadoPagoService.formatPrice(amountNeeded)} más para envío gratis
                 </p>
               )}
             </div>
@@ -354,7 +358,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
                 <span>Pagos 100% seguros y encriptados</span>
               </div>
               <div>
-                📦 Envío gratis en pedidos superiores a S/ 50
+                📦 Envío gratis en pedidos superiores a S/ {freeShippingThreshold.toFixed(2)}
               </div>
             </div>
           </CardContent>

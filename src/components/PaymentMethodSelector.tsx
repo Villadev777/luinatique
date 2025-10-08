@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+import { useShippingSettings } from '@/hooks/useShippingSettings';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
@@ -47,6 +48,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const { state, clearCart } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { calculateShipping, getFreeShippingThreshold, getAmountNeededForFreeShipping } = useShippingSettings();
   
   const [selectedMethod, setSelectedMethod] = useState<'mercadopago' | 'paypal' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -129,7 +131,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             try {
               console.log('📝 Saving order to database...');
               
-              // Guardar orden directamente en Supabase
               await createOrder({
                 paymentDetails: { ...details, method: 'paypal' },
                 cartItems: state.items,
@@ -207,7 +208,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         onSuccess({ preference_id: preference.id, method: 'mercadopago' });
       }
       
-      // USAR EL MÉTODO redirectToCheckout QUE TIENE DETECCIÓN AUTOMÁTICA
       mercadoPagoService.redirectToCheckout(preference);
       
     } catch (error) {
@@ -249,14 +249,16 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     }
   };
 
-  // 🔧 CÁLCULO CORREGIDO CON ENVÍO
+  // 🔧 CÁLCULO CON CONFIGURACIÓN DINÁMICA
   const subtotalPEN = checkoutData.items.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const shippingCostPEN = mercadoPagoService.calculateShipping(subtotalPEN);
+  const shippingCostPEN = calculateShipping(subtotalPEN);
   const totalPEN = subtotalPEN + shippingCostPEN;
+  const freeShippingThreshold = getFreeShippingThreshold();
+  const amountNeeded = getAmountNeededForFreeShipping(subtotalPEN);
   
-  // Para PayPal (USD) - Ahora usa el método correcto que considera el umbral en PEN
+  // Para PayPal (USD)
   const subtotalUSD = paypalService.getTotalAmountUSD(checkoutData);
-  const shippingCostUSD = paypalService.getShippingCostUSD(subtotalPEN); // Pasa subtotal en PEN
+  const shippingCostUSD = paypalService.getShippingCostUSD(subtotalPEN);
   const totalUSD = subtotalUSD + shippingCostUSD;
 
   return (
@@ -363,9 +365,9 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                     )}
                   </div>
                 </div>
-                {subtotalPEN < 50 && (
+                {amountNeeded > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    💡 Agrega S/ {(50 - subtotalPEN).toFixed(2)} más para envío gratis
+                    💡 Agrega S/ {amountNeeded.toFixed(2)} más para envío gratis
                   </p>
                 )}
                 <Separator />
@@ -434,7 +436,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
               🔒 Tus datos están protegidos con encriptación SSL
             </div>
             <div className="text-xs text-muted-foreground">
-              📦 Envío gratis en pedidos superiores a S/ 50
+              📦 Envío gratis en pedidos superiores a S/ {freeShippingThreshold.toFixed(2)}
             </div>
           </div>
         </div>
