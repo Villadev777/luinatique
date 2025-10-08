@@ -6,7 +6,6 @@ const Footer = () => {
     {
       title: "Tienda",
       links: [
-        { name: "Nuevos Arrivals", href: "/shop?filter=new" },
         { name: "Anillos", href: "/shop/anillos" },
         { name: "Collares", href: "/shop/collares" },
         { name: "Aretes", href: "/shop/aretes" },
