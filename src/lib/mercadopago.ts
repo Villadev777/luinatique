@@ -65,6 +65,14 @@ export class MercadoPagoService {
   }
 
   /**
+   * Calcula el costo de envío basado en el subtotal
+   * REGLA: Envío gratis en compras mayores a S/ 50
+   */
+  calculateShipping(subtotal: number): number {
+    return subtotal >= 50 ? 0 : 9.99;
+  }
+
+  /**
    * Crea una preferencia de pago en MercadoPago
    */
   async createPreference(checkoutData: CheckoutData): Promise<PreferenceResponse> {
@@ -255,20 +263,51 @@ export class MercadoPagoService {
 
   /**
    * Construye el objeto de preferencia para MercadoPago
+   * 🔧 CORREGIDO: Ahora incluye el costo de envío como item separado
    */
   private buildPreferenceRequest(checkoutData: CheckoutData): PreferenceRequest {
     const baseUrl = window.location.origin;
     
+    // Calcular subtotal y envío
+    const subtotal = checkoutData.items.reduce((total, item) => 
+      total + (item.price * item.quantity), 0
+    );
+    const shippingCost = this.calculateShipping(subtotal);
+    
+    console.log('📦 Shipping calculation:', {
+      subtotal: subtotal.toFixed(2),
+      shippingCost: shippingCost.toFixed(2),
+      isFreeShipping: shippingCost === 0
+    });
+    
+    // Agregar items del carrito
+    const items = checkoutData.items.map(item => ({
+      id: item.id,
+      title: item.title,
+      quantity: item.quantity,
+      currency_id: 'PEN', // Perú - Soles
+      unit_price: item.price,
+      description: item.description,
+      picture_url: item.image,
+    }));
+    
+    // 🔧 AGREGAR ENVÍO COMO ITEM SEPARADO (solo si no es gratis)
+    if (shippingCost > 0) {
+      items.push({
+        id: 'shipping',
+        title: 'Costo de Envío',
+        quantity: 1,
+        currency_id: 'PEN',
+        unit_price: shippingCost,
+        description: 'Envío a domicilio',
+      });
+      console.log('✅ Added shipping item to preference:', shippingCost);
+    } else {
+      console.log('🎉 Free shipping applied (order over S/ 50)');
+    }
+    
     const preference: PreferenceRequest = {
-      items: checkoutData.items.map(item => ({
-        id: item.id,
-        title: item.title,
-        quantity: item.quantity,
-        currency_id: 'PEN', // Perú - Soles
-        unit_price: item.price,
-        description: item.description,
-        picture_url: item.image,
-      })),
+      items,
       payer: {
         email: checkoutData.customer.email,
         name: checkoutData.customer.name,
@@ -314,7 +353,10 @@ export class MercadoPagoService {
         customer_email: checkoutData.customer.email,
         order_timestamp: new Date().toISOString(),
         source: 'luinatique_web',
-        version: '1.0.0'
+        version: '1.0.0',
+        subtotal: subtotal.toFixed(2),
+        shipping_cost: shippingCost.toFixed(2),
+        free_shipping: shippingCost === 0
       },
     };
 

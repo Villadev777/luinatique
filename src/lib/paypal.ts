@@ -38,12 +38,34 @@ const getPayPalConfig = () => {
 export class PayPalService {
   private static instance: PayPalService;
   private config = getPayPalConfig();
+  
+  // 🔧 Tasa de cambio PEN a USD (actualizar según necesidad)
+  private readonly EXCHANGE_RATE = 0.267; // 1 PEN ≈ 0.267 USD
+  
+  // 🔧 Umbral para envío gratis en PEN
+  private readonly FREE_SHIPPING_THRESHOLD_PEN = 50;
+  private readonly SHIPPING_COST_PEN = 9.99;
 
   static getInstance(): PayPalService {
     if (!PayPalService.instance) {
       PayPalService.instance = new PayPalService();
     }
     return PayPalService.instance;
+  }
+
+  /**
+   * Calcula el costo de envío en USD basado en el subtotal en PEN
+   * 🔧 CORREGIDO: Ahora usa el umbral correcto de S/ 50 PEN
+   */
+  private calculateShippingUSD(subtotalPEN: number): number {
+    if (subtotalPEN >= this.FREE_SHIPPING_THRESHOLD_PEN) {
+      console.log('🎉 Free shipping applied (order over S/ 50)');
+      return 0;
+    }
+    
+    const shippingUSD = this.convertPENToUSD(this.SHIPPING_COST_PEN);
+    console.log(`📦 Shipping cost: S/ ${this.SHIPPING_COST_PEN} = $${shippingUSD.toFixed(2)} USD`);
+    return shippingUSD;
   }
 
   /**
@@ -68,6 +90,7 @@ export class PayPalService {
 
   /**
    * Convert cart items to PayPal order format
+   * 🔧 CORREGIDO: Calcula correctamente el envío basado en subtotal PEN
    */
   buildPayPalOrder(checkoutData: CheckoutData): PayPalOrder {
     const items = checkoutData.items.map(item => ({
@@ -84,10 +107,25 @@ export class PayPalService {
     const itemTotal = items.reduce((total, item) => 
       total + (parseFloat(item.unit_amount.value) * parseInt(item.quantity)), 0
     );
-
-    const shipping = itemTotal >= 50 ? 0 : 2.99; // $2.99 shipping or free over $50
-    const tax = itemTotal * 0.08; // 8% tax
+    
+    // 🔧 CORRECCIÓN IMPORTANTE: Calcular subtotal en PEN primero
+    const subtotalPEN = checkoutData.items.reduce((total, item) => 
+      total + (item.price * item.quantity), 0
+    );
+    
+    // Usar el subtotal en PEN para determinar si el envío es gratis
+    const shipping = this.calculateShippingUSD(subtotalPEN);
+    
+    const tax = itemTotal * 0; // Sin impuestos adicionales en USD
     const totalAmount = itemTotal + shipping + tax;
+    
+    console.log('💰 PayPal Order Breakdown:', {
+      subtotalPEN: `S/ ${subtotalPEN.toFixed(2)}`,
+      itemTotalUSD: `$${itemTotal.toFixed(2)}`,
+      shippingUSD: `$${shipping.toFixed(2)}`,
+      freeShippingApplied: shipping === 0,
+      totalUSD: `$${totalAmount.toFixed(2)}`
+    });
 
     return {
       intent: 'CAPTURE',
@@ -241,12 +279,11 @@ export class PayPalService {
   }
 
   /**
-   * Convert PEN to USD (approximate rate)
-   * In production, you should use a real-time exchange rate API
+   * Convert PEN to USD
+   * 🔧 Tasa actualizada y con mejor precisión
    */
   private convertPENToUSD(penAmount: number): number {
-    const exchangeRate = 0.27; // Approximate PEN to USD rate
-    return penAmount * exchangeRate;
+    return penAmount * this.EXCHANGE_RATE;
   }
 
   /**
@@ -267,6 +304,13 @@ export class PayPalService {
       (total, item) => total + (item.price * item.quantity), 0
     );
     return this.convertPENToUSD(penTotal);
+  }
+  
+  /**
+   * Get shipping cost in USD based on PEN subtotal
+   */
+  getShippingCostUSD(subtotalPEN: number): number {
+    return this.calculateShippingUSD(subtotalPEN);
   }
 }
 
