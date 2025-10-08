@@ -53,6 +53,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const [selectedMethod, setSelectedMethod] = useState<'mercadopago' | 'paypal' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paypalLoaded, setPaypalLoaded] = useState(false);
+  const [shippingCostUSD, setShippingCostUSD] = useState<number>(0);
 
   const checkoutData: CheckoutData = providedCheckoutData || {
     items: state.items.map(item => ({
@@ -99,6 +100,26 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       status: 'recommended',
     },
   ];
+
+  // Cálculo de costos
+  const subtotalPEN = checkoutData.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const shippingCostPEN = calculateShipping(subtotalPEN);
+  const totalPEN = subtotalPEN + shippingCostPEN;
+  const freeShippingThreshold = getFreeShippingThreshold();
+  const amountNeeded = getAmountNeededForFreeShipping(subtotalPEN);
+  
+  // Para PayPal (USD)
+  const subtotalUSD = paypalService.getTotalAmountUSD(checkoutData);
+  const totalUSD = subtotalUSD + shippingCostUSD;
+
+  // Cargar costo de envío USD de forma async
+  useEffect(() => {
+    const loadShippingCost = async () => {
+      const cost = await paypalService.getShippingCostUSD(subtotalPEN);
+      setShippingCostUSD(cost);
+    };
+    loadShippingCost();
+  }, [subtotalPEN]);
 
   useEffect(() => {
     const loadPayPal = async () => {
@@ -248,18 +269,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         return <Badge variant="secondary">Disponible</Badge>;
     }
   };
-
-  // 🔧 CÁLCULO CON CONFIGURACIÓN DINÁMICA
-  const subtotalPEN = checkoutData.items.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const shippingCostPEN = calculateShipping(subtotalPEN);
-  const totalPEN = subtotalPEN + shippingCostPEN;
-  const freeShippingThreshold = getFreeShippingThreshold();
-  const amountNeeded = getAmountNeededForFreeShipping(subtotalPEN);
-  
-  // Para PayPal (USD)
-  const subtotalUSD = paypalService.getTotalAmountUSD(checkoutData);
-  const shippingCostUSD = paypalService.getShippingCostUSD(subtotalPEN);
-  const totalUSD = subtotalUSD + shippingCostUSD;
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
