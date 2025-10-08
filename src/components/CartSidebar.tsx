@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCart } from '@/context/CartContext';
+import { useShippingSettings } from '@/hooks/useShippingSettings';
 import useCheckout from '@/hooks/useCheckout';
 import { Button } from '@/components/ui/button'; 
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 export const CartSidebar: React.FC = () => {
   const { state, increaseQuantity, decreaseQuantity, removeItem, clearCart, closeCart } = useCart();
   const { goToCheckout, formatPrice, canCheckout } = useCheckout();
+  const { calculateShipping, getFreeShippingThreshold, getAmountNeededForFreeShipping } = useShippingSettings();
   const { toast } = useToast();
   const [promoCode, setPromoCode] = React.useState('');
   const [appliedPromo, setAppliedPromo] = React.useState<string | null>(null);
@@ -69,9 +71,11 @@ export const CartSidebar: React.FC = () => {
   };
 
   const subtotal = state.totalPrice;
-  const shipping = subtotal >= 50 ? 0 : 9.99;
+  const shipping = calculateShipping(subtotal);
   const tax = (subtotal - discount) * 0; // 18% tax
   const finalTotal = subtotal - discount + shipping + tax;
+  const freeShippingThreshold = getFreeShippingThreshold();
+  const amountNeeded = getAmountNeededForFreeShipping(subtotal);
 
   return (
     <Sheet open={state.isOpen} onOpenChange={(open) => !open && closeCart()}>
@@ -248,6 +252,11 @@ export const CartSidebar: React.FC = () => {
                     <span>Envío:</span>
                     <span>{shipping === 0 ? 'GRATIS' : formatPrice(shipping)}</span>
                   </div>
+                  {amountNeeded > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      💡 Agrega {formatPrice(amountNeeded)} más para envío gratis
+                    </p>
+                  )}
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>IGV:</span>
                     <span>{formatPrice(tax)}</span>
@@ -293,7 +302,7 @@ export const CartSidebar: React.FC = () => {
                 </div>
                 
                 <p className="text-xs text-muted-foreground text-center">
-                  Envío gratis en pedidos superiores a S/ 50
+                  Envío gratis en pedidos superiores a S/ {freeShippingThreshold.toFixed(2)}
                 </p>
                 
                 {/* Estimated delivery */}
