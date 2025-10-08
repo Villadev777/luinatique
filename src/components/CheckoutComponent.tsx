@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { mercadoPagoService } from '../lib/mercadopago';
 import { CheckoutData, CartItem } from '../types/mercadopago';
 import PaymentMethodSelector from './PaymentMethodSelector';
-import { Loader2, CreditCard, Shield, ArrowLeft } from 'lucide-react';
+import { Loader2, CreditCard, Shield, ArrowLeft, Truck } from 'lucide-react';
 
 interface CheckoutComponentProps {
   items: CartItem[];
@@ -39,7 +39,9 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
     state: '',
   });
 
-  const total = mercadoPagoService.calculateTotal(items);
+  const subtotal = mercadoPagoService.calculateTotal(items);
+  const shippingCost = subtotal >= 50 ? 0 : 9.99;
+  const total = subtotal + shippingCost;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,6 +300,35 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
             
             <Separator />
             
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal:</span>
+                <span>{mercadoPagoService.formatPrice(subtotal)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center text-sm">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-muted-foreground" />
+                  <span>Envío:</span>
+                </div>
+                <div>
+                  {shippingCost === 0 ? (
+                    <span className="text-green-600 font-semibold">GRATIS</span>
+                  ) : (
+                    <span>{mercadoPagoService.formatPrice(shippingCost)}</span>
+                  )}
+                </div>
+              </div>
+              
+              {subtotal < 50 && (
+                <p className="text-xs text-muted-foreground">
+                  💡 Agrega {mercadoPagoService.formatPrice(50 - subtotal)} más para envío gratis
+                </p>
+              )}
+            </div>
+            
+            <Separator />
+            
             <div className="flex justify-between items-center text-lg font-bold">
               <span>Total</span>
               <span>{mercadoPagoService.formatPrice(total)}</span>
@@ -317,9 +348,14 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
-              <Shield className="h-4 w-4" />
-              <span>Pagos 100% seguros y encriptados</span>
+            <div className="space-y-1 text-xs text-muted-foreground text-center">
+              <div className="flex items-center justify-center space-x-2">
+                <Shield className="h-4 w-4" />
+                <span>Pagos 100% seguros y encriptados</span>
+              </div>
+              <div>
+                📦 Envío gratis en pedidos superiores a S/ 50
+              </div>
             </div>
           </CardContent>
         </Card>
