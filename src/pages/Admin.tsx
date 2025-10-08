@@ -9,8 +9,9 @@ import { CategoryManagement } from '@/components/admin/CategoryManagement';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { OrderManagement } from '@/components/admin/OrderManagement';
 import { Analytics } from '@/components/admin/Analytics';
+import { ShippingSettings } from '@/components/admin/ShippingSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, FolderOpen, Users, BarChart3, ShoppingCart } from 'lucide-react';
+import { Package, FolderOpen, Users, BarChart3, ShoppingCart, Settings } from 'lucide-react';
 
 const Admin = () => {
   const { user, loading: authLoading } = useAuth();
@@ -59,7 +60,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
@@ -79,6 +80,10 @@ const Admin = () => {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Users
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Settings
             </TabsTrigger>
           </TabsList>
 
@@ -100,6 +105,10 @@ const Admin = () => {
 
           <TabsContent value="users">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <ShippingSettings />
           </TabsContent>
         </Tabs>
       </main>
