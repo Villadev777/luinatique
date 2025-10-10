@@ -124,6 +124,48 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // 🔧 VALIDAR Y USAR BACK_URLS DEL FRONTEND
+    if (!preferenceData.back_urls || 
+        !preferenceData.back_urls.success || 
+        !preferenceData.back_urls.failure || 
+        !preferenceData.back_urls.pending) {
+      console.error('❌ back_urls no fueron proporcionadas por el frontend');
+      return new Response(
+        JSON.stringify({ 
+          error: 'back_urls are required', 
+          details: 'success, failure, and pending URLs must be provided' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validar que las URLs sean HTTPS (excepto en localhost)
+    const validateUrl = (url: string, name: string) => {
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost') {
+          throw new Error(`${name} URL must use HTTPS protocol`);
+        }
+        return true;
+      } catch (err) {
+        throw new Error(`Invalid ${name} URL: ${err.message}`);
+      }
+    };
+
+    try {
+      validateUrl(preferenceData.back_urls.success, 'success');
+      validateUrl(preferenceData.back_urls.failure, 'failure');
+      validateUrl(preferenceData.back_urls.pending, 'pending');
+    } catch (validationError) {
+      console.error('❌ URL validation failed:', validationError.message);
+      return new Response(
+        JSON.stringify({ error: validationError.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('✅ back_urls validadas:', preferenceData.back_urls);
+
     // Prepare preference data for MercadoPago API
     const preferencePayload = {
       items: preferenceData.items.map((item: any) => ({
@@ -152,11 +194,7 @@ Deno.serve(async (req: Request) => {
           }
         }),
       },
-      back_urls: preferenceData.back_urls || {
-        success: 'https://lunatiqueshop.netlify.app/payment/success',
-        failure: 'https://lunatiqueshop.netlify.app/payment/failure',
-        pending: 'https://lunatiqueshop.netlify.app/payment/pending',
-      },
+      back_urls: preferenceData.back_urls, // ✅ USAR LAS URLs DEL FRONTEND
       auto_return: 'approved',
       notification_url: preferenceData.notification_url,
       statement_descriptor: 'LUINATIQUE',
@@ -262,7 +300,8 @@ Deno.serve(async (req: Request) => {
         // 🆕 Agregar info de debug
         _debug: {
           preference_user_id: preferenceUserId,
-          test_mode: isTestToken
+          test_mode: isTestToken,
+          back_urls_used: preferenceData.back_urls
         }
       }),
       { 
