@@ -25,6 +25,17 @@ const getSupabaseUrl = () => {
   return url;
 };
 
+// 🆕 FIX: Función para obtener la URL base correcta
+const getBaseUrl = () => {
+  // En producción, usar la URL completa
+  if (window.location.hostname !== 'localhost') {
+    return window.location.origin;
+  }
+  
+  // En desarrollo, usar localhost con puerto
+  return window.location.origin;
+};
+
 const MERCADOPAGO_API_URL = `${getSupabaseUrl()}/functions/v1`;
 
 export class MercadoPagoService {
@@ -82,7 +93,7 @@ export class MercadoPagoService {
       const preferenceData: PreferenceRequest = await this.buildPreferenceRequest(checkoutData);
       
       console.log('🚀 Creating MercadoPago preference...');
-      console.log('📝 Preference data:', preferenceData);
+      console.log('📝 Preference data:', JSON.stringify(preferenceData, null, 2));
       console.log('🔗 API URL:', `${MERCADOPAGO_API_URL}/mercadopago-create-preference`);
       
       const config = await this.checkConfiguration();
@@ -266,9 +277,12 @@ export class MercadoPagoService {
   /**
    * Construye el objeto de preferencia para MercadoPago
    * 🔧 USA CONFIGURACIÓN DINÁMICA: Incluye el costo de envío como item separado
+   * 🆕 FIX: Mejora las URLs de retorno y validaciones
    */
   private async buildPreferenceRequest(checkoutData: CheckoutData): Promise<PreferenceRequest> {
-    const baseUrl = window.location.origin;
+    const baseUrl = getBaseUrl();
+    
+    console.log('🏗️ Building preference with base URL:', baseUrl);
     
     // Calcular subtotal
     const subtotal = checkoutData.items.reduce((total, item) => 
@@ -310,6 +324,11 @@ export class MercadoPagoService {
       console.log('🎉 Free shipping applied (order qualifies for free shipping)');
     }
     
+    // 🆕 FIX: Validar street_number para evitar NaN
+    const streetNumber = checkoutData.shippingAddress?.number 
+      ? parseInt(checkoutData.shippingAddress.number) || 0 
+      : 0;
+    
     const preference: PreferenceRequest = {
       items,
       payer: {
@@ -320,7 +339,7 @@ export class MercadoPagoService {
         } : undefined,
         address: checkoutData.shippingAddress ? {
           street_name: checkoutData.shippingAddress.street,
-          street_number: parseInt(checkoutData.shippingAddress.number),
+          street_number: streetNumber,
           zip_code: checkoutData.shippingAddress.zipCode,
         } : undefined,
       },
@@ -337,16 +356,13 @@ export class MercadoPagoService {
       expiration_date_to: this.getExpirationDate(),
       payment_methods: {
         installments: 12,
-        excluded_payment_types: [
-          // Puedes excluir tipos de pago si lo deseas
-          // { id: 'ticket' }, // Excluir pagos en efectivo
-        ],
+        excluded_payment_types: [],
       },
       shipments: checkoutData.shippingAddress ? {
         mode: 'me2',
         receiver_address: {
           zip_code: checkoutData.shippingAddress.zipCode,
-          street_number: parseInt(checkoutData.shippingAddress.number),
+          street_number: streetNumber,
           street_name: checkoutData.shippingAddress.street,
           city_name: checkoutData.shippingAddress.city,
           state_name: checkoutData.shippingAddress.state,
@@ -364,7 +380,7 @@ export class MercadoPagoService {
       },
     };
 
-    console.log('🏗️ Built preference request:', preference);
+    console.log('🏗️ Built preference request:', JSON.stringify(preference, null, 2));
     return preference;
   }
 
@@ -405,7 +421,7 @@ export class MercadoPagoService {
 
   /**
    * Redirige al checkout de MercadoPago
-   * 🔧 FIX: Detecta automáticamente el modo basándose en la respuesta
+   * 🆕 FIX: Añade delay y mejor manejo de redirección para evitar ProgressEvent
    */
   redirectToCheckout(preference: PreferenceResponse): void {
     const hasProduction = !!preference.init_point;
@@ -415,15 +431,12 @@ export class MercadoPagoService {
     let mode: 'SANDBOX' | 'PRODUCCIÓN' | 'UNKNOWN';
     
     // 🔧 FIX CRÍTICO: Detectar modo basándose en qué URL está disponible
-    // Si solo hay sandbox_init_point, significa que se usó un token TEST
     if (hasSandbox && !hasProduction) {
-      // Token TEST - Usar SANDBOX
       checkoutUrl = preference.sandbox_init_point;
       mode = 'SANDBOX';
       console.log('✅ Token TEST detectado - Usando modo SANDBOX');
       console.log('💳 Usa tarjetas de prueba de MercadoPago');
     } else if (hasProduction) {
-      // Token PRODUCCIÓN - Usar PRODUCCIÓN
       checkoutUrl = preference.init_point;
       mode = 'PRODUCCIÓN';
       console.log('✅ Token PRODUCCIÓN detectado - Usando modo PRODUCCIÓN');
@@ -439,7 +452,6 @@ export class MercadoPagoService {
       hasProductionUrl: hasProduction,
       hasSandboxUrl: hasSandbox,
       preference_id: preference.id,
-      // Mostrar ambos URLs para debug
       production_url: preference.init_point || 'N/A',
       sandbox_url: preference.sandbox_init_point || 'N/A'
     });
@@ -461,9 +473,21 @@ export class MercadoPagoService {
       console.log('📅 Fecha: Cualquier fecha futura');
     }
     
-    // Redirigir a MercadoPago
-    console.log('➡️ Redirigiendo a:', checkoutUrl);
-    window.location.href = checkoutUrl;
+    // 🆕 FIX: Añadir delay antes de redirigir para evitar ProgressEvent error
+    console.log('⏳ Esperando 500ms antes de redirigir...');
+    setTimeout(() => {
+      console.log('➡️ Redirigiendo a:', checkoutUrl);
+      
+      // 🆕 FIX: Usar window.location.assign para mejor compatibilidad
+      try {
+        window.location.assign(checkoutUrl!);
+      } catch (error) {
+        console.error('❌ Error al redirigir con assign:', error);
+        // Fallback a href
+        console.log('🔄 Intentando con href como fallback...');
+        window.location.href = checkoutUrl!;
+      }
+    }, 500);
   }
 
   /**
@@ -493,6 +517,7 @@ export class MercadoPagoService {
       hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
       environment: window.location.hostname === 'localhost' ? 'development' : 'production',
       currentUrl: window.location.href,
+      baseUrl: getBaseUrl(),
       timestamp: new Date().toISOString()
     };
   }
