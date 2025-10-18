@@ -3,10 +3,27 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
-Deno.serve(async (req: Request) => {
+// 🆕 Helper para respuestas JSON
+const jsonResponse = (data: any, status = 200) => {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json'
+    }
+  });
+};
+
+// 🆕 Helper para respuestas de error
+const errorResponse = (error: string, details?: any, status = 500) => {
+  console.error(`❌ Error ${status}:`, error, details);
+  return jsonResponse({ error, details }, status);
+};
+
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -14,320 +31,301 @@ Deno.serve(async (req: Request) => {
 
   try {
     console.log('🚀 MercadoPago Create Preference - Start');
+    console.log('📍 Request URL:', req.url);
+    console.log('📍 Request method:', req.method);
     
     // Verify method
     if (req.method !== 'POST') {
-      return new Response(
-        JSON.stringify({ error: 'Method not allowed' }),
-        { 
-          status: 405, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      return errorResponse('Method not allowed', { allowedMethods: ['POST'] }, 405);
     }
 
     // Get MercadoPago credentials from environment
     const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
     if (!accessToken) {
       console.error('❌ MERCADOPAGO_ACCESS_TOKEN no configurado');
-      return new Response(
-        JSON.stringify({ error: 'MercadoPago access token not configured' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+      return errorResponse(
+        'MercadoPago access token not configured',
+        'Configure MERCADOPAGO_ACCESS_TOKEN en las variables de entorno de Supabase',
+        500
       );
     }
 
-    // Verificar que sea un token TEST
+    // 🔐 Detectar el tipo de token (TEST vs PRODUCCIÓN)
     const isTestToken = accessToken.startsWith('TEST-');
-    console.log('🔑 Access token type:', isTestToken ? 'TEST (Sandbox)' : 'PRODUCTION');
-    console.log('✅ Access token encontrado:', accessToken.substring(0, 20) + '...');
+    const tokenType = isTestToken ? 'SANDBOX (TEST)' : 'PRODUCCIÓN';
+    console.log(`✅ Token ${tokenType} detectado:`, accessToken.substring(0, 20) + '...');
     
-    // 🆕 OBTENER USER ID DEL TOKEN
-    try {
-      const userInfoResponse = await fetch('https://api.mercadopago.com/users/me', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      
-      if (userInfoResponse.ok) {
-        const userInfo = await userInfoResponse.json();
-        console.log('👤 USER INFO FROM TOKEN:', {
-          id: userInfo.id,
-          nickname: userInfo.nickname,
-          email: userInfo.email,
-          site_id: userInfo.site_id
-        });
-        console.log('🔑 Este token pertenece al User ID:', userInfo.id);
-      } else {
-        console.error('⚠️ No se pudo obtener info del usuario');
-      }
-    } catch (err) {
-      console.error('⚠️ Error obteniendo user info:', err);
+    if (!isTestToken) {
+      console.warn('⚠️ ADVERTENCIA: Usando token de PRODUCCIÓN - Los pagos serán REALES');
     }
 
     // Parse request body
-    const preferenceData = await req.json();
-    console.log('📝 Request data recibida:', JSON.stringify(preferenceData, null, 2));
-    
-    // Validate required fields
-    if (!preferenceData.items || !Array.isArray(preferenceData.items) || preferenceData.items.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Items are required and must be a non-empty array' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+    let preferenceData;
+    try {
+      preferenceData = await req.json();
+      console.log('📝 Request data recibida:', JSON.stringify(preferenceData, null, 2));
+    } catch (parseError) {
+      return errorResponse(
+        'Invalid JSON in request body',
+        parseError.message,
+        400
       );
     }
 
-    // Validar cada item
-    for (const item of preferenceData.items) {
-      if (!item.title || item.title.trim() === '') {
-        return new Response(
-          JSON.stringify({ error: 'Item title is required and cannot be empty' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    // 🆕 Validaciones mejoradas
+    if (!preferenceData.items || !Array.isArray(preferenceData.items) || preferenceData.items.length === 0) {
+      return errorResponse(
+        'Items are required and must be a non-empty array',
+        { received: preferenceData.items },
+        400
+      );
+    }
+
+    // 🆕 Validar cada item
+    for (const [index, item] of preferenceData.items.entries()) {
+      if (!item.title || typeof item.title !== 'string') {
+        return errorResponse(
+          `Item ${index}: title is required and must be a string`,
+          { item },
+          400
         );
       }
-      if (!item.unit_price || item.unit_price <= 0) {
-        return new Response(
-          JSON.stringify({ error: `Item "${item.title}" must have a price greater than 0` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      if (!item.unit_price || typeof item.unit_price !== 'number' || item.unit_price <= 0) {
+        return errorResponse(
+          `Item ${index}: unit_price must be a positive number`,
+          { item },
+          400
         );
       }
-      if (!item.quantity || item.quantity <= 0) {
-        return new Response(
-          JSON.stringify({ error: `Item "${item.title}" must have a quantity greater than 0` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      if (!item.quantity || typeof item.quantity !== 'number' || item.quantity <= 0) {
+        return errorResponse(
+          `Item ${index}: quantity must be a positive number`,
+          { item },
+          400
         );
       }
     }
 
     if (!preferenceData.payer || !preferenceData.payer.email) {
-      return new Response(
-        JSON.stringify({ error: 'Payer email is required' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+      return errorResponse(
+        'Payer email is required',
+        { received: preferenceData.payer },
+        400
       );
     }
 
-    // Validar formato de email
+    // 🆕 Validar email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(preferenceData.payer.email)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid email format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return errorResponse(
+        'Invalid email format',
+        { email: preferenceData.payer.email },
+        400
       );
     }
 
-    // 🔧 VALIDAR Y USAR BACK_URLS DEL FRONTEND
-    if (!preferenceData.back_urls || 
-        !preferenceData.back_urls.success || 
-        !preferenceData.back_urls.failure || 
-        !preferenceData.back_urls.pending) {
-      console.error('❌ back_urls no fueron proporcionadas por el frontend');
-      return new Response(
-        JSON.stringify({ 
-          error: 'back_urls are required', 
-          details: 'success, failure, and pending URLs must be provided' 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validar que las URLs sean HTTPS (excepto en localhost)
-    const validateUrl = (url: string, name: string) => {
-      try {
-        const parsed = new URL(url);
-        if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost') {
-          throw new Error(`${name} URL must use HTTPS protocol`);
-        }
-        return true;
-      } catch (err) {
-        throw new Error(`Invalid ${name} URL: ${err.message}`);
-      }
-    };
-
-    try {
-      validateUrl(preferenceData.back_urls.success, 'success');
-      validateUrl(preferenceData.back_urls.failure, 'failure');
-      validateUrl(preferenceData.back_urls.pending, 'pending');
-    } catch (validationError) {
-      console.error('❌ URL validation failed:', validationError.message);
-      return new Response(
-        JSON.stringify({ error: validationError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('✅ back_urls validadas:', preferenceData.back_urls);
+    // 🆕 Calcular totales para logging
+    const subtotal = preferenceData.items.reduce(
+      (sum: number, item: any) => sum + (item.unit_price * item.quantity),
+      0
+    );
+    console.log('💰 Subtotal calculado:', subtotal.toFixed(2), 'PEN');
 
     // Prepare preference data for MercadoPago API
     const preferencePayload = {
       items: preferenceData.items.map((item: any) => ({
-        id: String(item.id || crypto.randomUUID()),
-        title: String(item.title).substring(0, 256),
-        quantity: Number(item.quantity),
-        currency_id: 'PEN',
-        unit_price: Number(item.unit_price),
-        description: item.description ? String(item.description).substring(0, 256) : undefined,
-        picture_url: item.picture_url,
+        id: item.id || crypto.randomUUID().substring(0, 8),
+        title: item.title.substring(0, 256), // 🆕 MercadoPago limit
+        quantity: item.quantity,
+        currency_id: item.currency_id || 'PEN',
+        unit_price: Math.round(item.unit_price * 100) / 100, // 🆕 Redondear a 2 decimales
+        description: item.description?.substring(0, 256), // 🆕 MercadoPago limit
+        picture_url: item.picture_url
       })),
       payer: {
         email: preferenceData.payer.email,
-        name: preferenceData.payer.name || 'Usuario',
-        ...(preferenceData.payer.phone && { 
-          phone: {
-            area_code: '',
-            number: String(preferenceData.payer.phone.number || preferenceData.payer.phone)
-          }
+        name: preferenceData.payer.name,
+        ...(preferenceData.payer.phone && {
+          phone: preferenceData.payer.phone
         }),
-        ...(preferenceData.payer.address && { 
-          address: {
-            street_name: preferenceData.payer.address.street_name,
-            street_number: Number(preferenceData.payer.address.street_number),
-            zip_code: preferenceData.payer.address.zip_code
-          }
-        }),
+        ...(preferenceData.payer.address && {
+          address: preferenceData.payer.address
+        })
       },
-      back_urls: preferenceData.back_urls, // ✅ USAR LAS URLs DEL FRONTEND
-      auto_return: 'approved',
+      back_urls: preferenceData.back_urls || {
+        success: `${new URL(req.url).origin}/payment/success`,
+        failure: `${new URL(req.url).origin}/payment/failure`,
+        pending: `${new URL(req.url).origin}/payment/pending`
+      },
+      auto_return: preferenceData.auto_return || 'approved',
       notification_url: preferenceData.notification_url,
-      statement_descriptor: 'LUINATIQUE',
+      statement_descriptor: preferenceData.statement_descriptor || 'LUNATIQUE',
       external_reference: preferenceData.external_reference || `LUINA_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`,
-      expires: true,
-      expiration_date_to: (() => {
+      expires: preferenceData.expires !== false,
+      expiration_date_to: preferenceData.expiration_date_to || (() => {
         const exp = new Date();
         exp.setHours(exp.getHours() + 24);
         return exp.toISOString();
       })(),
       payment_methods: {
-        installments: 12,
-        excluded_payment_types: [],
-        excluded_payment_methods: []
+        installments: preferenceData.payment_methods?.installments || 12,
+        ...(preferenceData.payment_methods?.excluded_payment_types && {
+          excluded_payment_types: preferenceData.payment_methods.excluded_payment_types
+        }),
+        ...(preferenceData.payment_methods?.excluded_payment_methods && {
+          excluded_payment_methods: preferenceData.payment_methods.excluded_payment_methods
+        })
       },
-      ...(preferenceData.shipments && { 
-        shipments: {
-          mode: 'not_specified',
-          ...preferenceData.shipments
-        }
+      ...(preferenceData.shipments && {
+        shipments: preferenceData.shipments
       }),
       metadata: {
         source: 'luinatique_ecommerce',
         timestamp: new Date().toISOString(),
-        test_mode: isTestToken,
+        environment: isTestToken ? 'sandbox' : 'production',
+        subtotal: subtotal.toFixed(2),
         ...preferenceData.metadata
       }
     };
 
-    console.log('🎯 Datos preparados para MercadoPago:', JSON.stringify(preferencePayload, null, 2));
+    console.log('🎯 Payload preparado para MercadoPago API');
+    console.log('📦 Items:', preferencePayload.items.length);
+    console.log('💰 Total:', subtotal.toFixed(2), 'PEN');
+    console.log('🔗 Back URLs:', preferencePayload.back_urls);
 
     // Call MercadoPago API directly using fetch
-    console.log('📤 Creando preferencia en MercadoPago API...');
+    console.log('📤 Enviando request a MercadoPago API...');
+    const startTime = Date.now();
+    
     const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': crypto.randomUUID(),
+        'X-Idempotency-Key': crypto.randomUUID()
       },
-      body: JSON.stringify(preferencePayload),
+      body: JSON.stringify(preferencePayload)
     });
 
-    const responseText = await response.text();
-    console.log('📥 MercadoPago API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      body: responseText.substring(0, 500)
-    });
+    const responseTime = Date.now() - startTime;
+    console.log(`⏱️ Response time: ${responseTime}ms`);
 
+    // 🆕 Mejor manejo de errores de la API
     if (!response.ok) {
+      let errorData;
+      const responseText = await response.text();
+      
+      try {
+        errorData = JSON.parse(responseText);
+      } catch {
+        errorData = responseText;
+      }
+
       console.error('❌ MercadoPago API Error:', {
         status: response.status,
         statusText: response.statusText,
-        body: responseText
+        body: errorData
       });
-      
-      let errorDetails = responseText;
-      try {
-        const errorJson = JSON.parse(responseText);
-        errorDetails = errorJson.message || errorJson.error || JSON.stringify(errorJson);
-      } catch (e) {
-        // Si no es JSON, usar el texto tal cual
+
+      // 🆕 Mensajes de error más específicos
+      let errorMessage = 'MercadoPago API error';
+      switch (response.status) {
+        case 400:
+          errorMessage = 'Datos inválidos enviados a MercadoPago';
+          break;
+        case 401:
+          errorMessage = 'Token de MercadoPago inválido o expirado';
+          break;
+        case 403:
+          errorMessage = 'Acceso denegado por MercadoPago';
+          break;
+        case 404:
+          errorMessage = 'Endpoint de MercadoPago no encontrado';
+          break;
+        case 429:
+          errorMessage = 'Demasiadas peticiones a MercadoPago (rate limit)';
+          break;
+        case 500:
+        case 502:
+        case 503:
+          errorMessage = 'Error del servidor de MercadoPago';
+          break;
       }
-      
-      return new Response(
-        JSON.stringify({ 
-          error: 'MercadoPago API error',
+
+      return errorResponse(
+        errorMessage,
+        {
           status: response.status,
-          details: errorDetails,
-          message: 'Error al crear la preferencia de pago. Verifica las credenciales de MercadoPago.'
-        }),
-        { 
-          status: response.status, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+          mercadoPagoError: errorData,
+          tokenType
+        },
+        response.status
       );
     }
 
-    const result = JSON.parse(responseText);
-    
-    // 🆕 EXTRAER USER ID DE LA PREFERENCIA
-    const preferenceUserId = result.id.split('-')[0];
+    const result = await response.json();
     
     console.log('✅ Preferencia creada exitosamente:', {
       id: result.id,
-      preference_user_id: preferenceUserId,
-      init_point: result.init_point,
-      sandbox_init_point: result.sandbox_init_point,
+      external_reference: result.external_reference,
+      has_init_point: !!result.init_point,
+      has_sandbox_init_point: !!result.sandbox_init_point,
+      tokenType
     });
-    
-    console.log('🔍 VERIFICACIÓN: La preferencia fue creada con el User ID:', preferenceUserId);
+
+    // 🆕 Validar que se recibieron las URLs necesarias
+    if (!result.init_point && !result.sandbox_init_point) {
+      console.error('⚠️ ADVERTENCIA: No se recibieron URLs de checkout de MercadoPago');
+      return errorResponse(
+        'MercadoPago no devolvió URLs de checkout',
+        { result },
+        500
+      );
+    }
+
+    // 🆕 Log del modo detectado
+    if (result.sandbox_init_point && !result.init_point) {
+      console.log('🧪 Modo SANDBOX detectado - URL de prueba generada');
+    } else if (result.init_point) {
+      console.log('💳 Modo PRODUCCIÓN detectado - URL real generada');
+    }
 
     // Return only the necessary data
-    return new Response(
-      JSON.stringify({
-        id: result.id,
-        init_point: result.init_point,
-        sandbox_init_point: result.sandbox_init_point,
-        public_key: result.public_key,
-        external_reference: result.external_reference,
-        date_created: result.date_created,
-        // 🆕 Agregar info de debug
-        _debug: {
-          preference_user_id: preferenceUserId,
-          test_mode: isTestToken,
-          back_urls_used: preferenceData.back_urls
-        }
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+    return jsonResponse({
+      id: result.id,
+      init_point: result.init_point,
+      sandbox_init_point: result.sandbox_init_point,
+      public_key: result.public_key,
+      external_reference: result.external_reference,
+      date_created: result.date_created,
+      // 🆕 Información adicional útil
+      mode: result.sandbox_init_point && !result.init_point ? 'sandbox' : 'production',
+      checkout_url: result.init_point || result.sandbox_init_point
+    }, 200);
 
   } catch (error) {
-    console.error('❌ Error creating MercadoPago preference:', error);
+    console.error('❌ Error inesperado:', error);
     
+    // Log detailed error information
     console.error('Error details:', {
       name: error.name,
       message: error.message,
-      stack: error.stack,
+      stack: error.stack
     });
-    
-    return new Response(
-      JSON.stringify({ 
-        error: 'Failed to create payment preference',
-        details: error.message 
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+
+    // 🆕 Mejor manejo de diferentes tipos de errores
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      return errorResponse(
+        'Error de conexión con MercadoPago',
+        'No se pudo conectar con la API de MercadoPago. Verifica tu conexión.',
+        503
+      );
+    }
+
+    return errorResponse(
+      'Failed to create payment preference',
+      error.message,
+      500
     );
   }
 });
