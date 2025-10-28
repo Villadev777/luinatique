@@ -9,7 +9,7 @@ import { useShippingSettings } from '@/hooks/useShippingSettings';
 import { mercadoPagoService } from '../lib/mercadopago';
 import { CheckoutData, CartItem } from '../types/mercadopago';
 import PaymentMethodSelector from './PaymentMethodSelector';
-import { Loader2, CreditCard, Shield, ArrowLeft, Truck } from 'lucide-react';
+import { Loader2, CreditCard, Shield, ArrowLeft, Truck, AlertCircle } from 'lucide-react';
 
 interface CheckoutComponentProps {
   items: CartItem[];
@@ -32,6 +32,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
     email: '',
     name: '',
     phone: '',
+    dni: '', // ✨ NUEVO: Campo DNI
   });
   const [shippingData, setShippingData] = useState({
     street: '',
@@ -40,6 +41,9 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
     city: '',
     state: '',
   });
+  
+  // ✨ Estado de validación DNI
+  const [dniError, setDniError] = useState('');
 
   const subtotal = mercadoPagoService.calculateTotal(items);
   const shippingCost = calculateShipping(subtotal);
@@ -47,14 +51,46 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
   const freeShippingThreshold = getFreeShippingThreshold();
   const amountNeeded = getAmountNeededForFreeShipping(subtotal);
 
+  // ✨ Validar DNI
+  const validateDNI = (dni: string): boolean => {
+    if (!dni) {
+      setDniError('El DNI es obligatorio');
+      return false;
+    }
+    
+    if (dni.length !== 8) {
+      setDniError('El DNI debe tener 8 dígitos');
+      return false;
+    }
+    
+    if (!/^[0-9]{8}$/.test(dni)) {
+      setDniError('El DNI solo debe contener números');
+      return false;
+    }
+    
+    setDniError('');
+    return true;
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!customerData.email || !customerData.name) {
+    // ✨ Validar campos obligatorios incluyendo DNI
+    if (!customerData.email || !customerData.name || !customerData.dni) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Por favor complete los campos obligatorios',
+        description: 'Por favor complete todos los campos obligatorios (Email, Nombre y DNI)',
+      });
+      return;
+    }
+
+    // ✨ Validar DNI antes de continuar
+    if (!validateDNI(customerData.dni)) {
+      toast({
+        variant: 'destructive',
+        title: 'DNI inválido',
+        description: dniError,
       });
       return;
     }
@@ -69,7 +105,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
     try {
       const checkoutData: CheckoutData = {
         items,
-        customer: customerData,
+        customer: customerData, // ✨ Ahora incluye DNI
         shippingAddress: shippingData.street ? shippingData : undefined,
       };
 
@@ -103,7 +139,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
   const preparePaymentData = (): CheckoutData => {
     return {
       items,
-      customer: customerData,
+      customer: customerData, // ✨ Incluye DNI
       shippingAddress: shippingData.street ? shippingData : undefined,
     };
   };
@@ -182,6 +218,46 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
                     placeholder="Juan Pérez"
                     required
                   />
+                </div>
+
+                {/* ✨ NUEVO: Campo DNI */}
+                <div>
+                  <Label htmlFor="dni" className="flex items-center gap-2">
+                    DNI *
+                    <span className="text-xs text-muted-foreground font-normal">
+                      (8 dígitos)
+                    </span>
+                  </Label>
+                  <Input
+                    id="dni"
+                    type="text"
+                    value={customerData.dni}
+                    onChange={(e) => {
+                      // Solo permitir números y máximo 8 dígitos
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                      setCustomerData({ ...customerData, dni: value });
+                      // Validar en tiempo real
+                      if (value.length > 0) {
+                        validateDNI(value);
+                      } else {
+                        setDniError('');
+                      }
+                    }}
+                    placeholder="12345678"
+                    maxLength={8}
+                    pattern="[0-9]{8}"
+                    className={dniError ? 'border-red-500' : ''}
+                    required
+                  />
+                  {dniError && (
+                    <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {dniError}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    💡 El DNI es necesario para procesar tu pago de forma segura y mejorar la tasa de aprobación
+                  </p>
                 </div>
 
                 <div>
