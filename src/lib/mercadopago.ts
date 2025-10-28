@@ -7,7 +7,7 @@ import {
 } from '../types/mercadopago';
 import { getShippingConfig } from './shippingConfig';
 
-// Get Supabase URL from environment - NUNCA usar localhost en producción
+// Get Supabase URL from environment
 const getSupabaseUrl = () => {
   const url = import.meta.env.VITE_SUPABASE_URL;
   
@@ -25,18 +25,19 @@ const getSupabaseUrl = () => {
   return url;
 };
 
-// 🆕 FIX: Función para obtener la URL base correcta
+// Función para obtener la URL base correcta
 const getBaseUrl = () => {
-  // En producción, usar la URL completa
   if (window.location.hostname !== 'localhost') {
     return window.location.origin;
   }
-  
-  // En desarrollo, usar localhost con puerto
   return window.location.origin;
 };
 
 const MERCADOPAGO_API_URL = `${getSupabaseUrl()}/functions/v1`;
+
+// 🆕 Constantes de validación para PRODUCCIÓN
+const MIN_PRODUCT_PRICE = 10; // Mínimo S/ 10 por producto
+const MIN_ORDER_TOTAL = 15; // Mínimo S/ 15 para la orden completa
 
 export class MercadoPagoService {
   private static instance: MercadoPagoService;
@@ -48,9 +49,6 @@ export class MercadoPagoService {
     return MercadoPagoService.instance;
   }
 
-  /**
-   * Verifica la configuración del servicio
-   */
   async checkConfiguration(): Promise<{
     isConfigured: boolean;
     environment: 'development' | 'production';
@@ -58,7 +56,6 @@ export class MercadoPagoService {
   }> {
     const issues: string[] = [];
     
-    // Check environment variables
     if (!import.meta.env.VITE_SUPABASE_URL) {
       issues.push('VITE_SUPABASE_URL not configured');
     }
@@ -76,20 +73,22 @@ export class MercadoPagoService {
     };
   }
 
-  /**
-   * Calcula el costo de envío basado en el subtotal
-   * 🆕 AHORA USA CONFIGURACIÓN DINÁMICA DE LA BASE DE DATOS
-   */
   async calculateShipping(subtotal: number): Promise<number> {
     const config = await getShippingConfig();
     return subtotal >= config.freeShippingThreshold ? 0 : config.shippingCost;
   }
 
-  /**
-   * Crea una preferencia de pago en MercadoPago
-   */
   async createPreference(checkoutData: CheckoutData): Promise<PreferenceResponse> {
     try {
+      // 🆕 Validar monto mínimo
+      const subtotal = this.calculateTotal(checkoutData.items);
+      const shippingCost = await this.calculateShipping(subtotal);
+      const total = subtotal + shippingCost;
+      
+      if (total < MIN_ORDER_TOTAL) {
+        throw new Error(`El monto mínimo de compra es S/ ${MIN_ORDER_TOTAL}`);
+      }
+
       const preferenceData: PreferenceRequest = await this.buildPreferenceRequest(checkoutData);
       
       console.log('🚀 Creating MercadoPago preference...');
@@ -136,7 +135,6 @@ export class MercadoPagoService {
           body: responseData
         });
         
-        // Provide more specific error messages based on status
         let errorMessage = 'Error al crear la preferencia de pago';
         
         switch (response.status) {
@@ -174,7 +172,6 @@ export class MercadoPagoService {
     } catch (error) {
       console.error('❌ Error creating MercadoPago preference:', error);
       
-      // Enhance error messages for better UX
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error('Error de conexión: No se pudo conectar al servidor. Verifique su conexión a internet.');
       }
@@ -183,9 +180,6 @@ export class MercadoPagoService {
     }
   }
 
-  /**
-   * Obtiene el estado de un pago
-   */
   async getPaymentStatus(paymentId: string): Promise<PaymentStatus> {
     try {
       console.log('🔍 Getting payment status for ID:', paymentId);
@@ -213,9 +207,6 @@ export class MercadoPagoService {
     }
   }
 
-  /**
-   * Procesa el callback de éxito/fallo del pago
-   */
   async processPaymentCallback(params: URLSearchParams): Promise<PaymentStatus | null> {
     const collection_id = params.get('collection_id');
     const collection_status = params.get('collection_status');
@@ -239,7 +230,6 @@ export class MercadoPagoService {
       preference_id
     });
 
-    // Si tenemos un payment_id, obtenemos los detalles del pago
     if (payment_id) {
       try {
         return await this.getPaymentStatus(payment_id);
@@ -248,7 +238,6 @@ export class MercadoPagoService {
       }
     }
 
-    // Si no hay payment_id pero tenemos otros datos, creamos un objeto básico
     if (collection_status && external_reference) {
       return {
         id: collection_id || payment_id || '',
@@ -258,7 +247,7 @@ export class MercadoPagoService {
         preference_id: preference_id || '',
         payment_method_id: payment_type || '',
         payment_type_id: payment_type || '',
-        transaction_amount: 0, // Se debe obtener de tu base de datos
+        transaction_amount: 0,
         date_created: new Date().toISOString(),
         payer: {
           id: '',
@@ -275,9 +264,7 @@ export class MercadoPagoService {
   }
 
   /**
-   * Construye el objeto de preferencia para MercadoPago
-   * 🔧 USA CONFIGURACIÓN DINÁMICA: Incluye el costo de envío como item separado
-   * 🆕 FIX: Mejora las URLs de retorno y validaciones
+   * 🆕 MEJORADO: Construye preferencia con estructura similar a n8n verificado
    */
   private async buildPreferenceRequest(checkoutData: CheckoutData): Promise<PreferenceRequest> {
     const baseUrl = getBaseUrl();
@@ -289,7 +276,7 @@ export class MercadoPagoService {
       total + (item.price * item.quantity), 0
     );
     
-    // 🆕 OBTENER CONFIGURACIÓN DINÁMICA
+    // Obtener configuración dinámica
     const shippingCost = await this.calculateShipping(subtotal);
     
     console.log('📦 Shipping calculation:', {
@@ -298,18 +285,28 @@ export class MercadoPagoService {
       isFreeShipping: shippingCost === 0
     });
     
-    // Agregar items del carrito
-    const items = checkoutData.items.map(item => ({
-      id: item.id,
-      title: item.title,
-      quantity: item.quantity,
-      currency_id: 'PEN', // Perú - Soles
-      unit_price: item.price,
-      description: item.description,
-      picture_url: item.image,
-    }));
+    // 🆕 MEJORA: Agregar items con category_id y validaciones
+    const items = checkoutData.items.map(item => {
+      // Validar precio mínimo
+      const validatedPrice = Math.max(item.price, MIN_PRODUCT_PRICE);
+      
+      if (item.price < MIN_PRODUCT_PRICE) {
+        console.warn(`⚠️ Producto ${item.id} tiene precio menor al mínimo. Ajustando de ${item.price} a ${validatedPrice}`);
+      }
+      
+      return {
+        id: item.id,
+        title: item.title.substring(0, 256), // Límite de MercadoPago
+        quantity: item.quantity,
+        currency_id: 'PEN',
+        unit_price: Math.round(validatedPrice * 100) / 100, // Redondear a 2 decimales
+        description: item.description || `${item.title} - Lunatique Shop`, // 🆕 Siempre incluir
+        picture_url: item.image,
+        category_id: 'fashion' // 🆕 CRÍTICO: Categoría del producto
+      };
+    });
     
-    // 🔧 AGREGAR ENVÍO COMO ITEM SEPARADO (solo si no es gratis)
+    // Agregar envío como item separado (si no es gratis)
     if (shippingCost > 0) {
       items.push({
         id: 'shipping',
@@ -318,31 +315,47 @@ export class MercadoPagoService {
         currency_id: 'PEN',
         unit_price: shippingCost,
         description: 'Envío a domicilio',
+        category_id: 'services' // 🆕 Categoría para servicios
       });
       console.log('✅ Added shipping item to preference:', shippingCost);
     } else {
-      console.log('🎉 Free shipping applied (order qualifies for free shipping)');
+      console.log('🎉 Free shipping applied');
     }
     
-    // 🆕 FIX: Validar street_number para evitar NaN
+    // 🆕 MEJORA: Validar y sanitizar street_number
     const streetNumber = checkoutData.shippingAddress?.number 
-      ? parseInt(checkoutData.shippingAddress.number) || 0 
-      : 0;
+      ? parseInt(checkoutData.shippingAddress.number) || 1 
+      : 1;
+    
+    // 🆕 MEJORA: Construir payer con identification (DNI)
+    const payerData: any = {
+      email: checkoutData.customer.email,
+      name: checkoutData.customer.name,
+      phone: checkoutData.customer.phone ? {
+        number: checkoutData.customer.phone
+      } : undefined,
+      address: checkoutData.shippingAddress ? {
+        street_name: checkoutData.shippingAddress.street,
+        street_number: streetNumber,
+        zip_code: checkoutData.shippingAddress.zipCode,
+      } : undefined,
+    };
+
+    // 🆕 CRÍTICO: Agregar identification si está disponible
+    // Esto es CLAVE para mejorar tasa de aprobación
+    if (checkoutData.customer.dni) {
+      payerData.identification = {
+        type: 'DNI',
+        number: checkoutData.customer.dni
+      };
+      console.log('✅ DNI incluido en payer:', checkoutData.customer.dni);
+    } else {
+      console.warn('⚠️ DNI no proporcionado. Esto puede reducir la tasa de aprobación.');
+    }
     
     const preference: PreferenceRequest = {
       items,
-      payer: {
-        email: checkoutData.customer.email,
-        name: checkoutData.customer.name,
-        phone: checkoutData.customer.phone ? {
-          number: checkoutData.customer.phone
-        } : undefined,
-        address: checkoutData.shippingAddress ? {
-          street_name: checkoutData.shippingAddress.street,
-          street_number: streetNumber,
-          zip_code: checkoutData.shippingAddress.zipCode,
-        } : undefined,
-      },
+      payer: payerData,
       back_urls: {
         success: `${baseUrl}/payment/success`,
         failure: `${baseUrl}/payment/failure`,
@@ -350,7 +363,7 @@ export class MercadoPagoService {
       },
       auto_return: 'approved',
       notification_url: `${getSupabaseUrl()}/functions/v1/mercadopago-webhook`,
-      statement_descriptor: 'LUINATIQUE',
+      statement_descriptor: 'LUNATIQUE', // Máximo 11 caracteres
       external_reference: this.generateExternalReference(),
       expires: true,
       expiration_date_to: this.getExpirationDate(),
@@ -364,19 +377,23 @@ export class MercadoPagoService {
           zip_code: checkoutData.shippingAddress.zipCode,
           street_number: streetNumber,
           street_name: checkoutData.shippingAddress.street,
-          city_name: checkoutData.shippingAddress.city,
-          state_name: checkoutData.shippingAddress.state,
+          city_name: checkoutData.shippingAddress.city || 'Lima',
+          state_name: checkoutData.shippingAddress.state || 'Lima',
           country_name: 'Perú',
         },
       } : undefined,
       metadata: {
         customer_email: checkoutData.customer.email,
         order_timestamp: new Date().toISOString(),
-        source: 'luinatique_web',
-        version: '1.0.0',
+        source: 'lunatique_web',
+        version: '2.0.0', // 🆕 Versión actualizada
         subtotal: subtotal.toFixed(2),
         shipping_cost: shippingCost.toFixed(2),
-        free_shipping: shippingCost === 0
+        free_shipping: shippingCost === 0,
+        environment: window.location.hostname === 'localhost' ? 'development' : 'production',
+        // 🆕 Metadata adicional útil
+        items_count: checkoutData.items.length,
+        has_dni: !!checkoutData.customer.dni
       },
     };
 
@@ -384,27 +401,18 @@ export class MercadoPagoService {
     return preference;
   }
 
-  /**
-   * Genera una referencia externa única
-   */
   private generateExternalReference(): string {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 15);
     return `LUINA_${timestamp}_${random}`;
   }
 
-  /**
-   * Obtiene la fecha de expiración (24 horas desde ahora)
-   */
   private getExpirationDate(): string {
     const expiration = new Date();
     expiration.setHours(expiration.getHours() + 24);
     return expiration.toISOString();
   }
 
-  /**
-   * Mapea el collection_status al formato de PaymentStatus
-   */
   private mapCollectionStatusToPaymentStatus(collectionStatus: string): PaymentStatus['status'] {
     const statusMap: { [key: string]: PaymentStatus['status'] } = {
       'approved': 'approved',
@@ -419,10 +427,6 @@ export class MercadoPagoService {
     return statusMap[collectionStatus] || 'pending';
   }
 
-  /**
-   * Redirige al checkout de MercadoPago
-   * 🆕 FIX: Añade delay y mejor manejo de redirección para evitar ProgressEvent
-   */
   redirectToCheckout(preference: PreferenceResponse): void {
     const hasProduction = !!preference.init_point;
     const hasSandbox = !!preference.sandbox_init_point;
@@ -430,7 +434,7 @@ export class MercadoPagoService {
     let checkoutUrl: string | undefined;
     let mode: 'SANDBOX' | 'PRODUCCIÓN' | 'UNKNOWN';
     
-    // 🔧 FIX CRÍTICO: Detectar modo basándose en qué URL está disponible
+    // Detectar modo basándose en qué URL está disponible
     if (hasSandbox && !hasProduction) {
       checkoutUrl = preference.sandbox_init_point;
       mode = 'SANDBOX';
@@ -462,7 +466,7 @@ export class MercadoPagoService {
       throw new Error('URL de checkout no disponible. Verifica tu configuración de MercadoPago.');
     }
     
-    // Mensaje informativo según el modo
+    // Mensaje según el modo
     if (mode === 'PRODUCCIÓN') {
       console.warn('⚠️ MODO PRODUCCIÓN: Los pagos serán REALES');
       console.warn('⚠️ Solo usa tarjetas reales en este modo');
@@ -473,33 +477,25 @@ export class MercadoPagoService {
       console.log('📅 Fecha: Cualquier fecha futura');
     }
     
-    // 🆕 FIX: Añadir delay antes de redirigir para evitar ProgressEvent error
+    // Delay antes de redirigir
     console.log('⏳ Esperando 500ms antes de redirigir...');
     setTimeout(() => {
       console.log('➡️ Redirigiendo a:', checkoutUrl);
       
-      // 🆕 FIX: Usar window.location.assign para mejor compatibilidad
       try {
         window.location.assign(checkoutUrl!);
       } catch (error) {
         console.error('❌ Error al redirigir con assign:', error);
-        // Fallback a href
         console.log('🔄 Intentando con href como fallback...');
         window.location.href = checkoutUrl!;
       }
     }, 500);
   }
 
-  /**
-   * Calcula el total de un carrito
-   */
   calculateTotal(items: CartItem[]): number {
     return items.reduce((total, item) => total + (item.price * item.quantity), 0);
   }
 
-  /**
-   * Formatea un precio para mostrar
-   */
   formatPrice(price: number): string {
     return new Intl.NumberFormat('es-PE', {
       style: 'currency',
@@ -507,9 +503,6 @@ export class MercadoPagoService {
     }).format(price);
   }
 
-  /**
-   * Obtiene información de debug del servicio
-   */
   getDebugInfo() {
     return {
       apiUrl: MERCADOPAGO_API_URL,
@@ -518,7 +511,9 @@ export class MercadoPagoService {
       environment: window.location.hostname === 'localhost' ? 'development' : 'production',
       currentUrl: window.location.href,
       baseUrl: getBaseUrl(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      minProductPrice: MIN_PRODUCT_PRICE,
+      minOrderTotal: MIN_ORDER_TOTAL
     };
   }
 }
