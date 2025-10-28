@@ -165,6 +165,7 @@ export interface CheckoutData {
     email: string;
     name?: string;
     phone?: string;
+    dni?: string; // 🆕 Agregar DNI para mejorar tasa de aprobación en MercadoPago
   };
   shippingAddress?: {
     street: string;
