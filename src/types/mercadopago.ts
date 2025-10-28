@@ -1,3 +1,6 @@
+// 🎯 MercadoPago Types - Compatible con estructura n8n verificada
+// Basado en implementación exitosa de CEPEBAN Instituto
+
 export interface MercadoPagoConfig {
   accessToken: string;
   environment: 'sandbox' | 'production';
@@ -6,7 +9,7 @@ export interface MercadoPagoConfig {
 export interface PreferenceItem {
   id?: string;
   title: string;
-  category_id?: string;
+  category_id: string; // ✨ REQUERIDO: 'services', 'fashion', etc.
   quantity: number;
   currency_id: string;
   unit_price: number;
@@ -15,28 +18,28 @@ export interface PreferenceItem {
 }
 
 export interface Payer {
-  name?: string;
+  name: string; // ✨ REQUERIDO
   surname?: string;
-  email?: string;
+  email: string; // ✨ REQUERIDO
   phone?: {
     area_code?: string;
-    number?: string;
+    number: string;
   };
-  identification?: {
-    type?: string;
-    number?: string;
+  identification: { // ✨ CRÍTICO: Mejora tasa de aprobación
+    type: 'DNI' | 'CE' | 'RUC' | 'Otro'; // Tipos de documento Perú
+    number: string;
   };
   address?: {
-    street_name?: string;
+    street_name: string;
     street_number?: number;
     zip_code?: string;
   };
 }
 
 export interface BackUrls {
-  success?: string;
-  failure?: string;
-  pending?: string;
+  success: string; // ✨ REQUERIDO
+  failure: string; // ✨ REQUERIDO
+  pending: string; // ✨ REQUERIDO
 }
 
 export interface PaymentMethods {
@@ -53,13 +56,13 @@ export interface PaymentMethods {
 
 export interface PreferenceRequest {
   items: PreferenceItem[];
-  payer?: Payer;
-  back_urls?: BackUrls;
-  auto_return?: 'approved' | 'all';
+  payer: Payer; // ✨ REQUERIDO con identification
+  back_urls: BackUrls; // ✨ REQUERIDO
+  auto_return: 'approved' | 'all';
+  notification_url: string; // ✨ REQUERIDO para webhooks
+  external_reference: string; // ✨ REQUERIDO: ID único del pedido
   payment_methods?: PaymentMethods;
-  notification_url?: string;
   statement_descriptor?: string;
-  external_reference?: string;
   expires?: boolean;
   expiration_date_from?: string;
   expiration_date_to?: string;
@@ -88,7 +91,7 @@ export interface PreferenceRequest {
       country_name?: string;
     };
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, any>; // ✨ Para datos adicionales tracking
 }
 
 export interface PreferenceResponse {
@@ -163,9 +166,10 @@ export interface CheckoutData {
   items: CartItem[];
   customer: {
     email: string;
-    name?: string;
+    name: string; // ✨ REQUERIDO
+    surname?: string;
     phone?: string;
-    dni?: string; // 🆕 Agregar DNI para mejorar tasa de aprobación en MercadoPago
+    dni: string; // ✨ CRÍTICO: DNI mejora tasa de aprobación en Perú
   };
   shippingAddress?: {
     street: string;
@@ -174,4 +178,31 @@ export interface CheckoutData {
     city: string;
     state: string;
   };
+}
+
+// ✨ Nuevas interfaces para mejorar tracking
+export interface OrderMetadata {
+  user_id?: string;
+  dni: string;
+  phone?: string;
+  address?: string;
+  email: string;
+  full_name: string;
+  timestamp: string;
+  source?: 'web' | 'whatsapp' | 'api';
+  [key: string]: any;
+}
+
+export interface PaymentCallbackParams {
+  collection_id?: string;
+  collection_status?: string;
+  payment_id?: string;
+  status?: string;
+  external_reference?: string;
+  payment_type?: string;
+  merchant_order_id?: string;
+  preference_id?: string;
+  site_id?: string;
+  processing_mode?: string;
+  merchant_account_id?: string;
 }
