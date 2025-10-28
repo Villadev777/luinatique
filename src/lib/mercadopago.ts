@@ -1,9 +1,12 @@
+// 🎯 MercadoPago Service - Estructura verificada con n8n CEPEBAN
+// ✨ Mejoras: DNI obligatorio, metadata enriquecida, category_id, mejor logging
 import { 
   PreferenceRequest, 
   PreferenceResponse, 
   PaymentStatus,
   CheckoutData,
-  CartItem 
+  CartItem,
+  OrderMetadata 
 } from '../types/mercadopago';
 import { getShippingConfig } from './shippingConfig';
 
@@ -80,7 +83,12 @@ export class MercadoPagoService {
 
   async createPreference(checkoutData: CheckoutData): Promise<PreferenceResponse> {
     try {
-      // 🆕 Validar monto mínimo
+      // ✨ Validar DNI antes de crear preferencia
+      if (!checkoutData.customer.dni) {
+        throw new Error('El DNI es obligatorio para procesar el pago');
+      }
+
+      // Validar monto mínimo
       const subtotal = this.calculateTotal(checkoutData.items);
       const shippingCost = await this.calculateShipping(subtotal);
       const total = subtotal + shippingCost;
@@ -264,7 +272,8 @@ export class MercadoPagoService {
   }
 
   /**
-   * 🆕 MEJORADO: Construye preferencia con estructura similar a n8n verificado
+   * ✨ MEJORADO: Estructura idéntica a n8n verificado de CEPEBAN
+   * Incluye: category_id, identification DNI, metadata enriquecida
    */
   private async buildPreferenceRequest(checkoutData: CheckoutData): Promise<PreferenceRequest> {
     const baseUrl = getBaseUrl();
@@ -285,9 +294,13 @@ export class MercadoPagoService {
       isFreeShipping: shippingCost === 0
     });
     
-    // 🆕 MEJORA: Agregar items con category_id y validaciones
+    // ✨ Generar ID único al estilo CEPEBAN
+    const timestamp = new Date().getTime();
+    const userId = checkoutData.customer.email.split('@')[0]; // user de email
+    const baseId = `LUINA-${userId}-${timestamp}`;
+    
+    // ✨ Construir items con category_id obligatorio
     const items = checkoutData.items.map(item => {
-      // Validar precio mínimo
       const validatedPrice = Math.max(item.price, MIN_PRODUCT_PRICE);
       
       if (item.price < MIN_PRODUCT_PRICE) {
@@ -295,81 +308,89 @@ export class MercadoPagoService {
       }
       
       return {
-        id: item.id,
-        title: item.title.substring(0, 256), // Límite de MercadoPago
+        id: `${baseId}-${item.id}`,
+        title: item.title.substring(0, 256),
+        description: item.description || `${item.title} - Lunatique Shop`,
+        category_id: 'fashion', // ✨ CRÍTICO: category_id obligatorio
         quantity: item.quantity,
         currency_id: 'PEN',
-        unit_price: Math.round(validatedPrice * 100) / 100, // Redondear a 2 decimales
-        description: item.description || `${item.title} - Lunatique Shop`, // 🆕 Siempre incluir
-        picture_url: item.image,
-        category_id: 'fashion' // 🆕 CRÍTICO: Categoría del producto
+        unit_price: Math.round(validatedPrice * 100) / 100,
+        picture_url: item.image
       };
     });
     
-    // Agregar envío como item separado (si no es gratis)
+    // Agregar envío como item si no es gratis
     if (shippingCost > 0) {
       items.push({
-        id: 'shipping',
+        id: `${baseId}-shipping`,
         title: 'Costo de Envío',
+        description: 'Envío a domicilio',
+        category_id: 'services', // Servicios usan 'services'
         quantity: 1,
         currency_id: 'PEN',
-        unit_price: shippingCost,
-        description: 'Envío a domicilio',
-        category_id: 'services' // 🆕 Categoría para servicios
+        unit_price: shippingCost
       });
-      console.log('✅ Added shipping item to preference:', shippingCost);
-    } else {
-      console.log('🎉 Free shipping applied');
+      console.log('✅ Added shipping item:', shippingCost);
     }
     
-    // 🆕 MEJORA: Validar y sanitizar street_number
+    // ✨ Separar nombre completo en name y surname
+    const fullName = checkoutData.customer.name || 'Cliente';
+    const nameParts = fullName.trim().split(' ');
+    const name = nameParts[0];
+    const surname = nameParts.slice(1).join(' ') || name;
+    
+    // ✨ Validar street_number
     const streetNumber = checkoutData.shippingAddress?.number 
       ? parseInt(checkoutData.shippingAddress.number) || 1 
       : 1;
     
-    // 🆕 MEJORA: Construir payer con identification (DNI)
-    const payerData: any = {
-      email: checkoutData.customer.email,
-      name: checkoutData.customer.name,
-      phone: checkoutData.customer.phone ? {
-        number: checkoutData.customer.phone
-      } : undefined,
-      address: checkoutData.shippingAddress ? {
-        street_name: checkoutData.shippingAddress.street,
-        street_number: streetNumber,
-        zip_code: checkoutData.shippingAddress.zipCode,
-      } : undefined,
-    };
-
-    // 🆕 CRÍTICO: Agregar identification si está disponible
-    // Esto es CLAVE para mejorar tasa de aprobación
-    if (checkoutData.customer.dni) {
-      payerData.identification = {
-        type: 'DNI',
-        number: checkoutData.customer.dni
-      };
-      console.log('✅ DNI incluido en payer:', checkoutData.customer.dni);
-    } else {
-      console.warn('⚠️ DNI no proporcionado. Esto puede reducir la tasa de aprobación.');
-    }
-    
+    // ✨ CRÍTICO: Construir payer con identification obligatoria
     const preference: PreferenceRequest = {
       items,
-      payer: payerData,
+      payer: {
+        name: name,
+        surname: surname,
+        email: checkoutData.customer.email,
+        phone: checkoutData.customer.phone ? {
+          number: checkoutData.customer.phone
+        } : undefined,
+        identification: {
+          type: 'DNI', // ✨ Tipo de documento peruano
+          number: checkoutData.customer.dni
+        },
+        address: checkoutData.shippingAddress ? {
+          street_name: checkoutData.shippingAddress.street,
+          street_number: streetNumber,
+          zip_code: checkoutData.shippingAddress.zipCode
+        } : undefined
+      },
       back_urls: {
         success: `${baseUrl}/payment/success`,
-        failure: `${baseUrl}/payment/failure`,
-        pending: `${baseUrl}/payment/pending`,
+        pending: `${baseUrl}/payment/success`, // ✨ Mismo que n8n
+        failure: `${baseUrl}/payment/success`  // ✨ Mismo que n8n
       },
       auto_return: 'approved',
       notification_url: `${getSupabaseUrl()}/functions/v1/mercadopago-webhook`,
-      statement_descriptor: 'LUNATIQUE', // Máximo 11 caracteres
-      external_reference: this.generateExternalReference(),
-      expires: true,
-      expiration_date_to: this.getExpirationDate(),
+      external_reference: baseId,
+      // ✨ Metadata enriquecida al estilo CEPEBAN
+      metadata: {
+        user_id: checkoutData.customer.email.replace('@', '_at_'),
+        dni: checkoutData.customer.dni,
+        phone: checkoutData.customer.phone || '',
+        address: checkoutData.shippingAddress?.street || '',
+        email: checkoutData.customer.email,
+        full_name: fullName,
+        timestamp: timestamp.toString(),
+        source: 'lunatique_web',
+        version: '2.1.0',
+        subtotal: subtotal.toFixed(2),
+        shipping_cost: shippingCost.toFixed(2),
+        items_count: checkoutData.items.length,
+        environment: window.location.hostname === 'localhost' ? 'development' : 'production'
+      } as OrderMetadata,
       payment_methods: {
         installments: 12,
-        excluded_payment_types: [],
+        excluded_payment_types: []
       },
       shipments: checkoutData.shippingAddress ? {
         mode: 'me2',
@@ -379,25 +400,15 @@ export class MercadoPagoService {
           street_name: checkoutData.shippingAddress.street,
           city_name: checkoutData.shippingAddress.city || 'Lima',
           state_name: checkoutData.shippingAddress.state || 'Lima',
-          country_name: 'Perú',
-        },
+          country_name: 'Perú'
+        }
       } : undefined,
-      metadata: {
-        customer_email: checkoutData.customer.email,
-        order_timestamp: new Date().toISOString(),
-        source: 'lunatique_web',
-        version: '2.0.0', // 🆕 Versión actualizada
-        subtotal: subtotal.toFixed(2),
-        shipping_cost: shippingCost.toFixed(2),
-        free_shipping: shippingCost === 0,
-        environment: window.location.hostname === 'localhost' ? 'development' : 'production',
-        // 🆕 Metadata adicional útil
-        items_count: checkoutData.items.length,
-        has_dni: !!checkoutData.customer.dni
-      },
+      statement_descriptor: 'LUNATIQUE',
+      expires: true,
+      expiration_date_to: this.getExpirationDate()
     };
 
-    console.log('🏗️ Built preference request:', JSON.stringify(preference, null, 2));
+    console.log('🏗️ Built preference (n8n-compatible):', JSON.stringify(preference, null, 2));
     return preference;
   }
 
@@ -513,7 +524,8 @@ export class MercadoPagoService {
       baseUrl: getBaseUrl(),
       timestamp: new Date().toISOString(),
       minProductPrice: MIN_PRODUCT_PRICE,
-      minOrderTotal: MIN_ORDER_TOTAL
+      minOrderTotal: MIN_ORDER_TOTAL,
+      version: '2.1.0-n8n-compatible'
     };
   }
 }
