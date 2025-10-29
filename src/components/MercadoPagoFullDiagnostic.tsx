@@ -45,7 +45,6 @@ const MercadoPagoFullDiagnostic: React.FC = () => {
             id: 'diagnostic-001',
             title: 'Producto de Prueba Diagnóstico MercadoPago',
             quantity: 1,
-            price: 100.00,
             unit_price: 100.00,
             currency_id: 'PEN',
             description: 'Prueba de diagnóstico completo para MercadoPago Checkout Pro',
