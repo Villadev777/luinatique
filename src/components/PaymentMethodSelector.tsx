@@ -68,6 +68,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       email: 'test_user_123456@testuser.com',
       name: 'Usuario de Prueba',
       phone: '+51987654321',
+      dni: '12345678', // ✅ FIXED: DNI obligatorio agregado
     },
     shippingAddress: {
       street: 'Av. Javier Prado Este',
@@ -214,6 +215,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
   const handleMercadoPagoPayment = async () => {
     console.log('🎯 handleMercadoPagoPayment - START');
+    console.log('📦 Checkout data being sent:', JSON.stringify(checkoutData, null, 2));
     
     setIsProcessing(true);
     
