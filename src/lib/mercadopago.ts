@@ -1,5 +1,6 @@
 // 🎯 MercadoPago Service - Estructura verificada con n8n CEPEBAN
 // ✨ Mejoras: DNI obligatorio, metadata enriquecida, category_id, mejor logging
+// 🆕 BUNDLE: Agrupación automática de productos con precio < S/ 10
 import { 
   PreferenceRequest, 
   PreferenceResponse, 
@@ -272,8 +273,12 @@ export class MercadoPagoService {
   }
 
   /**
-   * ✨ MEJORADO: Estructura idéntica a n8n verificado de CEPEBAN
-   * Incluye: category_id, identification DNI, metadata enriquecida
+   * 🎯 SOLUCIÓN BUNDLE: Agrupar productos de bajo precio
+   * 
+   * Estrategia:
+   * 1. Si hay items < S/ 10 y el subtotal >= S/ 10 → Crear bundle
+   * 2. Si hay items < S/ 10 y el subtotal < S/ 10 → Error (agregar más productos)
+   * 3. Si todos los items >= S/ 10 → Enviar normalmente
    */
   private async buildPreferenceRequest(checkoutData: CheckoutData): Promise<PreferenceRequest> {
     const baseUrl = getBaseUrl();
@@ -296,28 +301,58 @@ export class MercadoPagoService {
     
     // ✨ Generar ID único al estilo CEPEBAN
     const timestamp = new Date().getTime();
-    const userId = checkoutData.customer.email.split('@')[0]; // user de email
+    const userId = checkoutData.customer.email.split('@')[0];
     const baseId = `LUINA-${userId}-${timestamp}`;
     
-    // ✨ Construir items con category_id obligatorio
-    const items = checkoutData.items.map(item => {
-      const validatedPrice = Math.max(item.price, MIN_PRODUCT_PRICE);
+    // ✅ ESTRATEGIA: Si hay items con precio < S/ 10, agrupar en un bundle
+    const hasLowPriceItems = checkoutData.items.some(item => item.price < MIN_PRODUCT_PRICE);
+    
+    let items: any[];
+    
+    if (hasLowPriceItems && subtotal >= MIN_PRODUCT_PRICE) {
+      // ✅ Crear un bundle con todos los productos
+      console.log('📦 Creando bundle por productos de precio bajo');
       
-      if (item.price < MIN_PRODUCT_PRICE) {
-        console.warn(`⚠️ Producto ${item.id} tiene precio menor al mínimo. Ajustando de ${item.price} a ${validatedPrice}`);
-      }
+      const itemsDescription = checkoutData.items
+        .map(item => `${item.quantity}x ${item.title}`)
+        .join(', ');
       
-      return {
+      items = [{
+        id: `${baseId}-bundle`,
+        title: 'Compra Múltiple',
+        description: itemsDescription.substring(0, 256),
+        category_id: 'fashion',
+        quantity: 1,
+        currency_id: 'PEN',
+        unit_price: Math.round(subtotal * 100) / 100,
+        picture_url: checkoutData.items[0].image
+      }];
+      
+      console.log('✅ Bundle creado:', {
+        total: subtotal,
+        items: itemsDescription
+      });
+      
+    } else if (hasLowPriceItems && subtotal < MIN_PRODUCT_PRICE) {
+      // ❌ Total es menor al mínimo incluso agrupado
+      throw new Error(
+        `El total de la compra (S/ ${subtotal.toFixed(2)}) es menor al mínimo requerido de S/ ${MIN_PRODUCT_PRICE}. ` +
+        `Agregue más productos al carrito.`
+      );
+      
+    } else {
+      // ✅ Todos los productos cumplen el mínimo - enviar normalmente
+      items = checkoutData.items.map(item => ({
         id: `${baseId}-${item.id}`,
         title: item.title.substring(0, 256),
         description: item.description || `${item.title} - Lunatique Shop`,
-        category_id: 'fashion', // ✨ CRÍTICO: category_id obligatorio
+        category_id: 'fashion',
         quantity: item.quantity,
         currency_id: 'PEN',
-        unit_price: Math.round(validatedPrice * 100) / 100,
+        unit_price: Math.round(item.price * 100) / 100,
         picture_url: item.image
-      };
-    });
+      }));
+    }
     
     // Agregar envío como item si no es gratis
     if (shippingCost > 0) {
@@ -325,7 +360,7 @@ export class MercadoPagoService {
         id: `${baseId}-shipping`,
         title: 'Costo de Envío',
         description: 'Envío a domicilio',
-        category_id: 'services', // Servicios usan 'services'
+        category_id: 'services',
         quantity: 1,
         currency_id: 'PEN',
         unit_price: shippingCost
@@ -355,7 +390,7 @@ export class MercadoPagoService {
           number: checkoutData.customer.phone
         } : undefined,
         identification: {
-          type: 'DNI', // ✨ Tipo de documento peruano
+          type: 'DNI',
           number: checkoutData.customer.dni
         },
         address: checkoutData.shippingAddress ? {
@@ -366,13 +401,12 @@ export class MercadoPagoService {
       },
       back_urls: {
         success: `${baseUrl}/payment/success`,
-        pending: `${baseUrl}/payment/success`, // ✨ Mismo que n8n
-        failure: `${baseUrl}/payment/success`  // ✨ Mismo que n8n
+        pending: `${baseUrl}/payment/success`,
+        failure: `${baseUrl}/payment/success`
       },
       auto_return: 'approved',
       notification_url: `${getSupabaseUrl()}/functions/v1/mercadopago-webhook`,
       external_reference: baseId,
-      // ✨ Metadata enriquecida al estilo CEPEBAN
       metadata: {
         user_id: checkoutData.customer.email.replace('@', '_at_'),
         dni: checkoutData.customer.dni,
@@ -525,7 +559,7 @@ export class MercadoPagoService {
       timestamp: new Date().toISOString(),
       minProductPrice: MIN_PRODUCT_PRICE,
       minOrderTotal: MIN_ORDER_TOTAL,
-      version: '2.1.0-n8n-compatible'
+      version: '2.2.0-bundle-strategy'
     };
   }
 }
