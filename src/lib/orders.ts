@@ -196,7 +196,8 @@ export const createOrder = async ({
       paymentId,
       method,
       itemsCount: cartItems.length,
-      customerEmail: customerInfo.email
+      customerEmail: customerInfo.email,
+      hasDNI: !!customerInfo.dni
     });
 
     // 🔐 SEGURIDAD: Validar email
@@ -236,12 +237,13 @@ export const createOrder = async ({
       .substr(2, 9)
       .toUpperCase()}`;
 
+    // 🔧 FIX: No incluir customer_dni ya que la columna no existe en la tabla
     const orderData = {
       order_number: orderNumber,
       customer_email: sanitizeString(customerInfo.email) || 'unknown@example.com',
       customer_name: sanitizeString(customerInfo.name) || 'Cliente',
       customer_phone: sanitizeString(customerInfo.phone) || null,
-      customer_dni: sanitizeString(customerInfo.dni) || null,
+      // ⚠️ NO INCLUIR customer_dni porque la columna no existe en la tabla orders
 
       shipping_street: sanitizeString(shippingAddress?.street) || null,
       shipping_number: sanitizeString(shippingAddress?.number) || null,
@@ -316,13 +318,14 @@ export const createOrder = async ({
     }
 
     // 📧 Enviar notificación al webhook de N8N (NO bloquea la respuesta)
+    // ✨ INCLUIR DNI en el webhook si está disponible (para Mercado Pago)
     const webhookData = {
       order_id: newOrder.id,
       order_number: newOrder.order_number,
       customer_email: newOrder.customer_email,
       customer_name: newOrder.customer_name,
       customer_phone: newOrder.customer_phone,
-      customer_dni: newOrder.customer_dni,
+      customer_dni: customerInfo.dni || null, // ✅ DNI va al webhook pero NO a la tabla orders
       total: newOrder.total,
       currency: newOrder.currency,
       payment_method: newOrder.payment_method,
