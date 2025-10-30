@@ -7,7 +7,7 @@ interface CreateOrderParams {
     email: string;
     name: string;
     phone?: string;
-    dni?: string;
+    dni?: string; // DNI is optional and won't be stored in orders table
   };
   shippingAddress?: {
     street?: string;
@@ -105,7 +105,7 @@ const sendToN8NWebhook = async (orderData: any, retryCount = 0): Promise<void> =
       customer_email: sanitizeString(orderData.customer_email),
       customer_name: sanitizeString(orderData.customer_name),
       customer_phone: sanitizeString(orderData.customer_phone),
-      customer_dni: sanitizeString(orderData.customer_dni),
+      customer_dni: sanitizeString(orderData.customer_dni), // Incluir en webhook aunque no se guarde en DB
       total: Number(orderData.total) || 0,
       currency: sanitizeString(orderData.currency),
       payment_method: sanitizeString(orderData.payment_method),
@@ -236,12 +236,14 @@ export const createOrder = async ({
       .substr(2, 9)
       .toUpperCase()}`;
 
+    // ✅ FIX: No incluir customer_dni en el objeto que se guarda en la base de datos
+    // La columna no existe en la tabla orders
     const orderData = {
       order_number: orderNumber,
       customer_email: sanitizeString(customerInfo.email) || 'unknown@example.com',
       customer_name: sanitizeString(customerInfo.name) || 'Cliente',
       customer_phone: sanitizeString(customerInfo.phone) || null,
-      customer_dni: sanitizeString(customerInfo.dni) || null,
+      // ⚠️ customer_dni NO se incluye porque la columna no existe en la tabla
 
       shipping_street: sanitizeString(shippingAddress?.street) || null,
       shipping_number: sanitizeString(shippingAddress?.number) || null,
@@ -316,13 +318,14 @@ export const createOrder = async ({
     }
 
     // 📧 Enviar notificación al webhook de N8N (NO bloquea la respuesta)
+    // Aquí SÍ incluimos el DNI para que se envíe al webhook/email aunque no se guarde en DB
     const webhookData = {
       order_id: newOrder.id,
       order_number: newOrder.order_number,
       customer_email: newOrder.customer_email,
       customer_name: newOrder.customer_name,
       customer_phone: newOrder.customer_phone,
-      customer_dni: newOrder.customer_dni,
+      customer_dni: customerInfo.dni || null, // ✅ Incluir DNI en webhook para notificaciones
       total: newOrder.total,
       currency: newOrder.currency,
       payment_method: newOrder.payment_method,
