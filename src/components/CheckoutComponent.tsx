@@ -32,7 +32,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
     email: '',
     name: '',
     phone: '',
-    dni: '', // ✨ NUEVO: Campo DNI
+    dni: '', // ⚠️ OPCIONAL: Solo requerido para Mercado Pago
   });
   const [shippingData, setShippingData] = useState({
     street: '',
@@ -51,11 +51,11 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
   const freeShippingThreshold = getFreeShippingThreshold();
   const amountNeeded = getAmountNeededForFreeShipping(subtotal);
 
-  // ✨ Validar DNI
+  // ✨ Validar DNI (solo si se proporciona)
   const validateDNI = (dni: string): boolean => {
     if (!dni) {
-      setDniError('El DNI es obligatorio');
-      return false;
+      setDniError('');
+      return true; // DNI vacío es válido (opcional)
     }
     
     if (dni.length !== 8) {
@@ -75,18 +75,18 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // ✨ Validar campos obligatorios incluyendo DNI
-    if (!customerData.email || !customerData.name || !customerData.dni) {
+    // ✨ Validar solo campos REALMENTE obligatorios (Email y Nombre)
+    if (!customerData.email || !customerData.name) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Por favor complete todos los campos obligatorios (Email, Nombre y DNI)',
+        description: 'Por favor complete Email y Nombre',
       });
       return;
     }
 
-    // ✨ Validar DNI antes de continuar
-    if (!validateDNI(customerData.dni)) {
+    // ✨ Validar formato DNI si se proporcionó
+    if (customerData.dni && !validateDNI(customerData.dni)) {
       toast({
         variant: 'destructive',
         title: 'DNI inválido',
@@ -105,7 +105,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
     try {
       const checkoutData: CheckoutData = {
         items,
-        customer: customerData, // ✨ Ahora incluye DNI
+        customer: customerData,
         shippingAddress: shippingData.street ? shippingData : undefined,
       };
 
@@ -139,7 +139,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
   const preparePaymentData = (): CheckoutData => {
     return {
       items,
-      customer: customerData, // ✨ Incluye DNI
+      customer: customerData,
       shippingAddress: shippingData.street ? shippingData : undefined,
     };
   };
@@ -220,12 +220,12 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
                   />
                 </div>
 
-                {/* ✨ NUEVO: Campo DNI */}
+                {/* ✨ DNI OPCIONAL: Solo para Mercado Pago */}
                 <div>
                   <Label htmlFor="dni" className="flex items-center gap-2">
-                    DNI *
+                    DNI (Opcional)
                     <span className="text-xs text-muted-foreground font-normal">
-                      (8 dígitos)
+                      (Requerido para Mercado Pago)
                     </span>
                   </Label>
                   <Input
@@ -237,17 +237,12 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
                       const value = e.target.value.replace(/\D/g, '').slice(0, 8);
                       setCustomerData({ ...customerData, dni: value });
                       // Validar en tiempo real
-                      if (value.length > 0) {
-                        validateDNI(value);
-                      } else {
-                        setDniError('');
-                      }
+                      validateDNI(value);
                     }}
                     placeholder="12345678"
                     maxLength={8}
                     pattern="[0-9]{8}"
                     className={dniError ? 'border-red-500' : ''}
-                    required
                   />
                   {dniError && (
                     <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
@@ -256,7 +251,7 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    💡 El DNI es necesario para procesar tu pago de forma segura y mejorar la tasa de aprobación
+                    💡 El DNI es <strong>obligatorio para Mercado Pago</strong> y mejora la tasa de aprobación. Opcional para PayPal.
                   </p>
                 </div>
 
@@ -419,11 +414,11 @@ export const CheckoutComponent: React.FC<CheckoutComponentProps> = ({
               <div className="text-sm text-muted-foreground space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span><strong>MercadoPago (PEN):</strong> Tarjetas locales, transferencias, PagoEfectivo</span>
+                  <span><strong>MercadoPago (PEN):</strong> Tarjetas locales, transferencias, PagoEfectivo (requiere DNI)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <span><strong>PayPal (USD):</strong> Pagos internacionales seguros</span>
+                  <span><strong>PayPal (USD):</strong> Pagos internacionales seguros (DNI opcional)</span>
                 </div>
               </div>
             </div>
