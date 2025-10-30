@@ -91,6 +91,10 @@ export const OrderManagement = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const { toast } = useToast();
 
+  // 💰 Tasa de conversión USD a PEN para referencia histórica
+  // Esta tasa es solo para mostrar el equivalente aproximado, NO para cálculos
+  const USD_TO_PEN_RATE = 3.50; // Aproximado
+
   const fetchOrders = async () => {
     try {
       console.log('📦 Fetching all orders...');
@@ -194,15 +198,45 @@ export const OrderManagement = () => {
     }
   };
 
+  /**
+   * 💰 NUEVO: Convertir a PEN si es necesario
+   * Si la orden está en USD, convertir a PEN para mostrar de forma consistente
+   */
+  const convertToPEN = (amount: number, currency: string): number => {
+    if (currency === 'USD') {
+      return amount * USD_TO_PEN_RATE;
+    }
+    return amount;
+  };
+
+  /**
+   * 💰 NUEVO: Formatear precio SIEMPRE en PEN
+   * Todos los precios se muestran en PEN para consistencia contable
+   */
   const formatPrice = (price: number, currency: string) => {
-    // Usar directamente el valor de currency de la base de datos
-    // Si no es un código de moneda válido, usar PEN por defecto
-    const currencyCode = currency && (currency === 'USD' || currency === 'PEN') ? currency : 'PEN';
+    const priceInPEN = convertToPEN(price, currency);
     
     return new Intl.NumberFormat('es-PE', {
       style: 'currency',
-      currency: currencyCode,
-    }).format(price);
+      currency: 'PEN',
+    }).format(priceInPEN);
+  };
+
+  /**
+   * 💰 NUEVO: Obtener badge con información del método de pago
+   */
+  const getPaymentMethodBadge = (method: string, currency: string) => {
+    if (method.toLowerCase() === 'paypal') {
+      return (
+        <div className="flex items-center gap-1">
+          <span>PayPal</span>
+          {currency === 'USD' && (
+            <span className="text-xs text-muted-foreground">(USD→PEN)</span>
+          )}
+        </div>
+      );
+    }
+    return <span className="capitalize">{method}</span>;
   };
 
   const formatDate = (dateString: string) => {
@@ -237,14 +271,15 @@ export const OrderManagement = () => {
 
   const exportToCSV = () => {
     const csv = [
-      ['Order Number', 'Customer', 'Email', 'Status', 'Payment Status', 'Total', 'Date'].join(','),
+      ['Order Number', 'Customer', 'Email', 'Payment Method', 'Status', 'Payment Status', 'Total (PEN)', 'Date'].join(','),
       ...filteredOrders.map(order => [
         order.order_number,
         order.customer_name,
         order.customer_email,
+        order.payment_method,
         order.status,
         order.payment_status,
-        order.total,
+        convertToPEN(order.total, order.currency).toFixed(2),
         formatDate(order.created_at)
       ].join(','))
     ].join('\n');
@@ -281,7 +316,7 @@ export const OrderManagement = () => {
             <div>
               <CardTitle>Order Management</CardTitle>
               <CardDescription>
-                Manage all customer orders ({orders.length} total)
+                Manage all customer orders ({orders.length} total) - Todos los precios en PEN
               </CardDescription>
             </div>
             <Button onClick={exportToCSV} variant="outline" size="sm">
@@ -331,9 +366,10 @@ export const OrderManagement = () => {
                   <TableRow>
                     <TableHead>Order</TableHead>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Payment Method</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Payment</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead>Total (PEN)</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -355,6 +391,11 @@ export const OrderManagement = () => {
                           <div className="text-sm text-muted-foreground">
                             {order.customer_email}
                           </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {getPaymentMethodBadge(order.payment_method, order.currency)}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -402,7 +443,7 @@ export const OrderManagement = () => {
                             <DialogHeader>
                               <DialogTitle>Order Details - #{order.order_number}</DialogTitle>
                               <DialogDescription>
-                                Complete order information and items
+                                Complete order information and items (Precios en PEN)
                               </DialogDescription>
                             </DialogHeader>
                             
@@ -464,7 +505,9 @@ export const OrderManagement = () => {
                                   <CardContent className="space-y-2 text-sm">
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">Method:</span>
-                                      <span className="font-medium capitalize">{selectedOrder.payment_method}</span>
+                                      <span className="font-medium">
+                                        {getPaymentMethodBadge(selectedOrder.payment_method, selectedOrder.currency)}
+                                      </span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground">Payment ID:</span>
@@ -476,6 +519,11 @@ export const OrderManagement = () => {
                                         {selectedOrder.payment_status}
                                       </Badge>
                                     </div>
+                                    {selectedOrder.currency === 'USD' && (
+                                      <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                                        ℹ️ Pagado en USD mediante PayPal. Monto convertido a PEN para registro contable (tasa referencial: S/ {USD_TO_PEN_RATE})
+                                      </div>
+                                    )}
                                   </CardContent>
                                 </Card>
 
@@ -528,7 +576,7 @@ export const OrderManagement = () => {
                                         </div>
                                       )}
                                       <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                                        <span>Total:</span>
+                                        <span>Total (PEN):</span>
                                         <span>{formatPrice(selectedOrder.total, selectedOrder.currency)}</span>
                                       </div>
                                     </div>
