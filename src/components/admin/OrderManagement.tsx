@@ -195,9 +195,13 @@ export const OrderManagement = () => {
   };
 
   const formatPrice = (price: number, currency: string) => {
+    // Usar directamente el valor de currency de la base de datos
+    // Si no es un código de moneda válido, usar PEN por defecto
+    const currencyCode = currency && (currency === 'USD' || currency === 'PEN') ? currency : 'PEN';
+    
     return new Intl.NumberFormat('es-PE', {
       style: 'currency',
-      currency: currency === 'USD' ? 'USD' : 'PEN',
+      currency: currencyCode,
     }).format(price);
   };
 
