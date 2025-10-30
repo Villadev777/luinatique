@@ -182,6 +182,53 @@ const sendToN8NWebhook = async (orderData: any, retryCount = 0): Promise<void> =
   }
 };
 
+/**
+ * 💰 Detectar moneda correcta basándose en el método de pago y payment_id
+ * 
+ * Reglas de detección:
+ * 1. Si method explícitamente es 'paypal' → USD
+ * 2. Si method explícitamente es 'mercadopago' → PEN
+ * 3. Si payment_id empieza con número (Mercado Pago) → PEN
+ * 4. Si payment_id tiene formato PayPal → USD
+ * 5. Por defecto → PEN (mercado peruano)
+ */
+const detectCurrency = (method: string, paymentId: string): 'USD' | 'PEN' => {
+  const normalizedMethod = method?.toLowerCase().trim();
+  
+  console.log('🔍 Detecting currency:', { method: normalizedMethod, paymentId });
+  
+  // Método explícito PayPal
+  if (normalizedMethod === 'paypal') {
+    console.log('✅ Currency detected: USD (PayPal method)');
+    return 'USD';
+  }
+  
+  // Método explícito MercadoPago
+  if (normalizedMethod === 'mercadopago' || normalizedMethod === 'mercado_pago') {
+    console.log('✅ Currency detected: PEN (MercadoPago method)');
+    return 'PEN';
+  }
+  
+  // Detectar por formato de payment_id
+  if (paymentId) {
+    // PayPal IDs tienen formato específico (ejemplo: "PAYID-M3EABDY1AB12345A6789")
+    if (/^[A-Z0-9]{10,}-[A-Z0-9]{10,}$/i.test(paymentId) || paymentId.startsWith('PAYID-')) {
+      console.log('✅ Currency detected: USD (PayPal ID format)');
+      return 'USD';
+    }
+    
+    // MercadoPago IDs son numéricos (ejemplo: "1234567890")
+    if (/^\d+$/.test(paymentId)) {
+      console.log('✅ Currency detected: PEN (MercadoPago ID format)');
+      return 'PEN';
+    }
+  }
+  
+  // Por defecto: PEN (mercado peruano)
+  console.log('⚠️ Currency detection fallback: PEN (default)');
+  return 'PEN';
+};
+
 export const createOrder = async ({
   paymentDetails,
   cartItems,
@@ -190,7 +237,7 @@ export const createOrder = async ({
 }: CreateOrderParams) => {
   try {
     const paymentId = paymentDetails.id;
-    const method = paymentDetails.method || 'paypal';
+    const method = paymentDetails.method || 'unknown';
 
     console.log('Creating order with data:', {
       paymentId,
@@ -237,6 +284,9 @@ export const createOrder = async ({
       .substr(2, 9)
       .toUpperCase()}`;
 
+    // 💰 DETECCIÓN CORRECTA DE MONEDA
+    const currency = detectCurrency(method, paymentId);
+
     // 🔧 FIX: No incluir customer_dni ya que la columna no existe en la tabla
     const orderData = {
       order_number: orderNumber,
@@ -256,7 +306,7 @@ export const createOrder = async ({
       shipping_cost: 0,
       tax: 0,
       total: subtotal,
-      currency: method === 'paypal' ? 'USD' : 'PEN',
+      currency: currency, // ✅ CORREGIDO: Usa la detección correcta
 
       status: 'processing',
       payment_status: 'approved',
