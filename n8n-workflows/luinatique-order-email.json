@@ -1,0 +1,193 @@
+{
+  "name": "Luinatique Order Email Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-created",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// 🔐 VALIDAR FIRMA HMAC\nconst crypto = require('crypto');\n\nconst payload = JSON.stringify($json);\nconst receivedSignature = $headers['x-webhook-signature'];\nconst secret = 'luinatique-webhook-secret-2024'; // CAMBIAR POR TU SECRET\n\nfunction verifySignature(payload, signature, secret) {\n  const hmac = crypto.createHmac('sha256', secret);\n  hmac.update(payload);\n  const calculatedSignature = hmac.digest('hex');\n  return calculatedSignature === signature;\n}\n\n// Verificar firma\nif (!verifySignature(payload, receivedSignature, secret)) {\n  throw new Error('❌ Invalid webhook signature - Unauthorized request');\n}\n\nconsole.log('✅ Webhook signature verified');\n\n// Validar datos requeridos\nif (!$json.customer_email || !$json.order_number) {\n  throw new Error('❌ Missing required fields');\n}\n\nreturn $json;"
+      },
+      "id": "validate-signature",
+      "name": "Validate Signature",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// 📧 FORMATEAR EMAIL\nconst order = $json;\n\n// Formatear items para el email\nconst itemsHtml = order.items.map(item => `\n  <tr>\n    <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${item.product_name}</td>\n    <td style=\"padding: 10px; border-bottom: 1px solid #eee; text-align: center;\">${item.quantity}</td>\n    <td style=\"padding: 10px; border-bottom: 1px solid #eee; text-align: right;\">${order.currency} ${item.subtotal.toFixed(2)}</td>\n  </tr>\n`).join('');\n\n// Formatear dirección de envío\nlet shippingHtml = '';\nif (order.shipping_address) {\n  const addr = order.shipping_address;\n  shippingHtml = `\n    <div style=\"background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0;\">\n      <h3 style=\"margin: 0 0 10px 0; color: #8B5CF6;\">📍 Dirección de Envío</h3>\n      <p style=\"margin: 5px 0;\">${addr.street} ${addr.number}</p>\n      <p style=\"margin: 5px 0;\">${addr.city}, ${addr.state} ${addr.zip_code}</p>\n      <p style=\"margin: 5px 0;\">${addr.country}</p>\n    </div>\n  `;\n}\n\n// Template HTML del email\nconst emailHtml = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Nueva Orden - Luinatique</title>\n</head>\n<body style=\"margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;\">\n  <div style=\"max-width: 600px; margin: 0 auto; background-color: white;\">\n    <!-- Header -->\n    <div style=\"background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); color: white; padding: 30px 20px; text-align: center;\">\n      <h1 style=\"margin: 0; font-size: 28px;\">🌙 Luinatique</h1>\n      <p style=\"margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;\">Joyería Artesanal</p>\n    </div>\n    \n    <!-- Content -->\n    <div style=\"padding: 30px 20px;\">\n      <h2 style=\"color: #8B5CF6; margin-top: 0;\">¡Gracias por tu compra, ${order.customer_name}! 🎉</h2>\n      \n      <p style=\"color: #666; line-height: 1.6;\">\n        Hemos recibido tu pedido correctamente y estamos preparándolo con mucho cariño. \n        Te notificaremos cuando esté listo para ser enviado.\n      </p>\n      \n      <!-- Order Details -->\n      <div style=\"background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;\">\n        <h3 style=\"margin: 0 0 15px 0; color: #333;\">📦 Detalles del Pedido</h3>\n        <table style=\"width: 100%; border-collapse: collapse;\">\n          <tr>\n            <td style=\"padding: 8px 0; color: #666;\">Número de Orden:</td>\n            <td style=\"padding: 8px 0; text-align: right; font-weight: bold;\">${order.order_number}</td>\n          </tr>\n          <tr>\n            <td style=\"padding: 8px 0; color: #666;\">Fecha:</td>\n            <td style=\"padding: 8px 0; text-align: right; font-weight: bold;\">${new Date(order.created_at).toLocaleDateString('es-ES')}</td>\n          </tr>\n          <tr>\n            <td style=\"padding: 8px 0; color: #666;\">Método de Pago:</td>\n            <td style=\"padding: 8px 0; text-align: right; font-weight: bold; text-transform: uppercase;\">${order.payment_method}</td>\n          </tr>\n        </table>\n      </div>\n      \n      <!-- Products -->\n      <h3 style=\"color: #333; margin: 25px 0 15px 0;\">🛍️ Productos</h3>\n      <table style=\"width: 100%; border-collapse: collapse; margin-bottom: 20px;\">\n        <thead>\n          <tr style=\"background: #f5f5f5;\">\n            <th style=\"padding: 12px; text-align: left; color: #666; font-weight: 600;\">Producto</th>\n            <th style=\"padding: 12px; text-align: center; color: #666; font-weight: 600;\">Cant.</th>\n            <th style=\"padding: 12px; text-align: right; color: #666; font-weight: 600;\">Total</th>\n          </tr>\n        </thead>\n        <tbody>\n          ${itemsHtml}\n        </tbody>\n      </table>\n      \n      <!-- Shipping Address -->\n      ${shippingHtml}\n      \n      <!-- Total -->\n      <div style=\"background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;\">\n        <p style=\"margin: 0 0 5px 0; font-size: 14px; opacity: 0.9;\">Total del Pedido</p>\n        <p style=\"margin: 0; font-size: 32px; font-weight: bold;\">${order.currency} ${order.total.toFixed(2)}</p>\n      </div>\n      \n      <!-- Contact Info -->\n      <div style=\"background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;\">\n        <h3 style=\"margin: 0 0 10px 0; color: #333;\">📞 ¿Necesitas Ayuda?</h3>\n        <p style=\"margin: 5px 0; color: #666;\">\n          Email: <a href=\"mailto:hola@luinatique.com\" style=\"color: #8B5CF6; text-decoration: none;\">hola@luinatique.com</a>\n        </p>\n        <p style=\"margin: 5px 0; color: #666;\">\n          WhatsApp: <a href=\"https://wa.me/51987654321\" style=\"color: #8B5CF6; text-decoration: none;\">+51 987 654 321</a>\n        </p>\n        <p style=\"margin: 5px 0; color: #666;\">\n          Web: <a href=\"https://luinatique.com\" style=\"color: #8B5CF6; text-decoration: none;\">www.luinatique.com</a>\n        </p>\n      </div>\n      \n      <p style=\"color: #666; line-height: 1.6; text-align: center; margin-top: 30px;\">\n        Gracias por confiar en nosotros ✨<br>\n        <strong>- El equipo de Luinatique</strong>\n      </p>\n    </div>\n    \n    <!-- Footer -->\n    <div style=\"background: #f5f5f5; padding: 20px; text-align: center; color: #999; font-size: 12px;\">\n      <p style=\"margin: 5px 0;\">© 2024 Luinatique - Joyería Artesanal</p>\n      <p style=\"margin: 5px 0;\">Este es un correo automático, por favor no responder.</p>\n      <p style=\"margin: 15px 0 5px 0;\">\n        <a href=\"https://instagram.com/luinatique\" style=\"color: #8B5CF6; text-decoration: none; margin: 0 10px;\">Instagram</a> |\n        <a href=\"https://facebook.com/luinatique\" style=\"color: #8B5CF6; text-decoration: none; margin: 0 10px;\">Facebook</a> |\n        <a href=\"https://luinatique.com\" style=\"color: #8B5CF6; text-decoration: none; margin: 0 10px;\">Web</a>\n      </p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  to: order.customer_email,\n  subject: `✨ Confirmación de Pedido #${order.order_number} - Luinatique`,\n  html: emailHtml,\n  orderData: order\n};"
+      },
+      "id": "format-email",
+      "name": "Format Email",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {
+          "ccList": "",
+          "bccList": ""
+        }
+      },
+      "id": "send-email-gmail",
+      "name": "Send Email (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [850, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "sendGrid",
+        "fromEmail": "noreply@luinatique.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "send-email-sendgrid",
+      "name": "Send Email (SendGrid)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [850, 400],
+      "credentials": {
+        "sendGridApi": {
+          "id": "2",
+          "name": "SendGrid account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Email sent successfully', order_id: $json.orderData.order_id } }}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// 🔄 GUARDAR EN SUPABASE (OPCIONAL)\n// Puedes guardar un log de los emails enviados\n\nconst order = $json.orderData;\n\nreturn {\n  email_log_id: Date.now().toString(),\n  order_id: order.order_id,\n  order_number: order.order_number,\n  recipient: order.customer_email,\n  subject: $json.subject,\n  sent_at: new Date().toISOString(),\n  status: 'sent',\n  email_provider: 'gmail' // o 'sendgrid'\n};"
+      },
+      "id": "prepare-log",
+      "name": "Prepare Log",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Signature": {
+      "main": [
+        [
+          {
+            "node": "Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email (Gmail)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Email (SendGrid)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email (Gmail)": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email (SendGrid)": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "id": "1",
+      "name": "luinatique"
+    },
+    {
+      "id": "2",
+      "name": "ecommerce"
+    },
+    {
+      "id": "3",
+      "name": "email"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2024-10-30T02:00:00.000Z",
+  "versionId": "1"
+}
